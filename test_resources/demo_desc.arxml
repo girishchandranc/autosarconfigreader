@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00049.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>ModuleConfig</SHORT-NAME>
+      <ELEMENTS>
+        <ECUC-MODULE-CONFIGURATION-VALUES>
+          <SHORT-NAME>demo</SHORT-NAME>
+          <DEFINITION-REF DEST="ECUC-MODULE-DEF">/ModuleDef/demo</DEFINITION-REF>
+          <CONTAINERS>
+            <ECUC-CONTAINER-VALUE>
+              <SHORT-NAME>ContA_conf</SHORT-NAME>
+              <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contA</DEFINITION-REF>
+              <PARAMETER-VALUES>
+                <ECUC-NUMERICAL-PARAM-VALUE>
+                  <DEFINITION-REF DEST="ECUC-BOOLEAN-PARAM-DEF">/ModuleDef/demo/contA/boolParam</DEFINITION-REF>
+                  <VALUE>1</VALUE>
+                </ECUC-NUMERICAL-PARAM-VALUE>
+                <ECUC-TEXTUAL-PARAM-VALUE>
+                  <DEFINITION-REF DEST="ECUC-ENUMERATION-PARAM-DEF">/ModuleDef/demo/contA/enumParam</DEFINITION-REF>
+                  <VALUE>RED</VALUE>
+                </ECUC-TEXTUAL-PARAM-VALUE>
+              </PARAMETER-VALUES>
+            </ECUC-CONTAINER-VALUE>
+            <ECUC-CONTAINER-VALUE>
+              <SHORT-NAME>ContB_conf_0</SHORT-NAME>
+              <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contB</DEFINITION-REF>
+              <SUB-CONTAINERS>
+                <ECUC-CONTAINER-VALUE>
+                  <SHORT-NAME>subCont_conf</SHORT-NAME>
+                  <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contB/subCont</DEFINITION-REF>
+                  <PARAMETER-VALUES>
+                  <ECUC-NUMERICAL-PARAM-VALUE>
+                    <DEFINITION-REF DEST="ECUC-INTEGER-PARAM-DEF">/ModuleDef/demo/contB/subCont/intParam</DEFINITION-REF>
+                    <VALUE>255</VALUE>
+                  </ECUC-NUMERICAL-PARAM-VALUE>
+                </PARAMETER-VALUES>
+                <REFERENCE-VALUES>
+                  <ECUC-REFERENCE-VALUE>
+                      <DEFINITION-REF DEST="ECUC-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/ref1</DEFINITION-REF>
+                      <VALUE-REF DEST="ECUC-CONTAINER-VALUE">/ModuleConfig/demo_other/ContA_conf</VALUE-REF>
+                  </ECUC-REFERENCE-VALUE>
+                  <ECUC-REFERENCE-VALUE>
+                      <DEFINITION-REF DEST="ECUC-FOREIGN-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/foreignRef</DEFINITION-REF>
+                      <VALUE-REF DEST="SW-COMPONENT-PROTOTYPE">/Autosar/Components/ComponentA</VALUE-REF>
+                  </ECUC-REFERENCE-VALUE>
+                </REFERENCE-VALUES>
+                </ECUC-CONTAINER-VALUE>
+              </SUB-CONTAINERS>
+            </ECUC-CONTAINER-VALUE>
+            <ECUC-CONTAINER-VALUE>
+              <SHORT-NAME>ContB_conf_1</SHORT-NAME>
+              <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contB</DEFINITION-REF>
+              <SUB-CONTAINERS>
+                <ECUC-CONTAINER-VALUE>
+                  <SHORT-NAME>subCont_conf</SHORT-NAME>
+                  <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contB/subCont</DEFINITION-REF>
+                  <PARAMETER-VALUES>
+                    <ECUC-NUMERICAL-PARAM-VALUE>
+                      <DEFINITION-REF DEST="ECUC-INTEGER-PARAM-DEF">/ModuleDef/demo/contB/subCont/intParam</DEFINITION-REF>
+                      <VALUE>255</VALUE>
+                    </ECUC-NUMERICAL-PARAM-VALUE>
+                  </PARAMETER-VALUES>
+                  <REFERENCE-VALUES>
+                    <ECUC-REFERENCE-VALUE>
+                        <DEFINITION-REF DEST="ECUC-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/ref1</DEFINITION-REF>
+                        <VALUE-REF DEST="ECUC-CONTAINER-VALUE">/ModuleConfig/demo/ContA_conf</VALUE-REF>
+                    </ECUC-REFERENCE-VALUE>
+                    <ECUC-REFERENCE-VALUE>
+                        <DEFINITION-REF DEST="ECUC-FOREIGN-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/foreignRef</DEFINITION-REF>
+                        <VALUE-REF DEST="SW-COMPONENT-PROTOTYPE">/Autosar/Components/ComponentA</VALUE-REF>
+                    </ECUC-REFERENCE-VALUE>
+                  </REFERENCE-VALUES>
+                </ECUC-CONTAINER-VALUE>
+              </SUB-CONTAINERS>
+            </ECUC-CONTAINER-VALUE>
+          </CONTAINERS>
+        </ECUC-MODULE-CONFIGURATION-VALUES>
+      </ELEMENTS>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

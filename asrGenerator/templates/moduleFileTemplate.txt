@@ -1,0 +1,142 @@
+{% import 'helper.txt' as helper -%}
+"""
+The python file contains the different classes for accessing the containers and parameters of the '{{ module.get_name() }}' module.
+This file is generated for the module '{{ module.get_name() }}' on {{ time }}.
+"""
+
+from lxml import etree
+from enum import Enum
+
+# Enums for possible parameter and reference types
+ParameterTypes = Enum('ParameterTypes', 'INTEGER FLOAT BOOLEAN STRING FUNCTION ENUMERATION')
+ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREIGN_REFERENCE')
+
+# dict supposed to be used internally by the module to store the path and its corresponding autosar node
+pathsToNodeDict = {}
+
+def read_and_build_module_configuration(file):
+    """
+    Reads the module configuration and build the {{ module.get_name() }} structure.
+
+    @param file: The configuration arxml file.
+    @return:  The built {{ module.get_name() }} structure. May return None if the given 
+              file do not contain the module configuration for
+              {{ module.get_name() }}.
+    """
+    rootAutosarNode = etree.parse(file)
+    moduleConfNode = None
+    #{*} is used to consider the wildcard namespace.
+    for module in rootAutosarNode.findall('//{*}ECUC-MODULE-CONFIGURATION-VALUES'):
+        definitionRef = module.find('{*}DEFINITION-REF').text
+        if definitionRef is not None and definitionRef.split('/').pop() == '{{ module.get_name() }}':
+            moduleConfNode = module
+            break
+
+    if moduleConfNode is not None:
+        return {{ module.get_name() }}(moduleConfNode)
+    else:
+        return None
+
+def get_node(path):
+    """
+    Returns the autosar node for the corresponding path.
+
+    @param path: The fully qualified autosar path for eg: /Autosar/Module/Container1.
+    @return:  The node corresponding to the path or None if the node for path is not available.
+    """
+    if path in pathsToNodeDict:
+        return pathsToNodeDict[path]
+    else:
+        return None
+
+# Base class for all autosar nodes
+class AutosarNode:
+    def __init__(self, node, definitionName):
+        self.node = node
+        self.name = None
+        shortNameNode = node.find('{*}SHORT-NAME')
+        if shortNameNode is not None:
+            self.name = shortNameNode.text
+        else:
+            self.name = definitionName
+        self.definitionName = definitionName
+        names = []
+        names.append(self.name)
+        self.__compute_path(node.getparent(), names)
+        self.path = self.__build_path(names)
+        pathsToNodeDict[self.path] = self
+
+    def __compute_path(self, node, names):
+        #get all path until the AUTOSAR root node
+        if node.tag.endswith('AUTOSAR'):
+            return names
+        else:
+            shortNameNode = node.find('{*}SHORT-NAME')
+            if shortNameNode is not None:
+                names.append(shortNameNode.text)
+
+            return self.__compute_path(node.getparent(), names)
+    
+    def __build_path(self, names):
+        returnValue = ''
+        for name in reversed(names):
+            returnValue = returnValue + '/' + name
+        return returnValue
+
+    def get_short_name(self):
+        return self.name
+
+    def get_definition_name(self):
+        return self.definitionName
+    
+    def get_node(self):
+        return self.node
+    
+    def get_path(self):
+        return self.path
+
+# Module configuration node(root node for the respective module)
+class {{ module.get_name() }}(AutosarNode):
+    def __init__(self, node):
+        super().__init__(node, '{{ module.get_name() }}')
+        {% for container in module.get_containers() -%}
+            {%- if container.is_multi_instance_container() %}
+        self.{{ container.get_name() }}s = []
+            {%- else %}
+        self.{{ container.get_name() }} = None
+            {%- endif %}  
+        {%- endfor %}
+
+
+        for container in node.findall('{*}CONTAINERS/{*}ECUC-CONTAINER-VALUE'):
+            definitionRef = container.find('{*}DEFINITION-REF').text
+            if definitionRef is not None:
+                definitionName = definitionRef.split('/').pop()
+            {%- for container in module.get_containers() %}
+                {%- if loop.first %}
+                if definitionName == '{{ container.get_name() }}':
+                {%- else %}
+                elif definitionName == '{{ container.get_name() }}':
+                {%- endif %}
+                {%- if container.is_multi_instance_container() %}
+                    self.{{ container.get_name() }}s.append({{ container.get_name() }}(container))
+                {%- else %}
+                    self.{{ container.get_name() }} = {{ container.get_name() }}(container)
+                {%- endif %}  
+            {%- endfor %}
+
+    
+{% for container in module.get_containers() %}
+    #Returns the configuration container {{ container.get_name() }}
+    {%- if container.is_multi_instance_container() %}
+    def get_{{ container.get_name() }}s(self):
+        return self.{{ container.get_name() }}s
+    {%- else %}
+    def get_{{ container.get_name() }}(self):
+        return self.{{ container.get_name() }}
+    {%- endif %}  
+{% endfor %}
+
+{% for container in module.get_containers() %}
+{{ helper.createContainer(container, ParameterTypes, ReferenceTypes) }}
+{% endfor %}
