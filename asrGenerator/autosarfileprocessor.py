@@ -9,31 +9,31 @@ ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREI
 class AutosarFileProcessor:
     def __init__(self, file, module):
         rootAutosarNode = etree.parse(file)
-        self.status = FileReaderStatus.MODULE_NOT_FOUND
-        self.moduleNodeForGeneration= None
+        self.__status = FileReaderStatus.MODULE_NOT_FOUND
+        self.__moduleNodeForGeneration= None
 
         #{*} is used to consider the wildcard namespace.
         for moduleDefNode in rootAutosarNode.findall('//{*}ECUC-MODULE-DEF/{*}SHORT-NAME'):
             if moduleDefNode.text == module:
-                self.moduleNodeForGeneration= moduleDefNode.getparent()
-                self.status = FileReaderStatus.MODULE_FOUND
+                self.__moduleNodeForGeneration= moduleDefNode.getparent()
+                self.__status = FileReaderStatus.MODULE_FOUND
                 break
     
     def get_status(self):
-        return self.status
+        return self.__status
     
     def build_module(self):
-        return Module(self.moduleNodeForGeneration) if self.moduleNodeForGeneration is not None else None
+        return Module(self.__moduleNodeForGeneration) if self.__moduleNodeForGeneration is not None else None
 
 #Representation of any autosar node
 class AutosarNode:
     def __init__(self, node):
-        self.xmlNode = node
-        self.name = node.find('{*}SHORT-NAME').text
+        self.__xmlNode = node
+        self.__name = node.find('{*}SHORT-NAME').text
         names = []
-        names.append(self.name)
+        names.append(self.__name)
         self.__compute_path(node.getparent(), names)
-        self.path = self.__build_path(names)
+        self.__path = self.__build_path(names)
 
     def __compute_path(self, node, names):
         #get all path until the ELEMENTS root node
@@ -53,217 +53,217 @@ class AutosarNode:
         return returnValue
 
     def get_name(self):
-        return self.name
+        return self.__name
     
     def get_path(self):
-        return self.path
+        return self.__path
     
     def __str__(self):
-        return self.name
+        return self.__name
 
 #Representation of autosar module node
 class Module(AutosarNode):
     def __init__(self, node):
         super().__init__(node)
-        self.containers = []
+        self.__containers = []
         for containerNode in node.findall('{*}CONTAINERS/{*}ECUC-PARAM-CONF-CONTAINER-DEF'):
-            self.containers.append(Container(containerNode, False))
+            self.__containers.append(Container(containerNode, False))
         for containerNode in node.findall('{*}CONTAINERS/{*}ECUC-CHOICE-CONTAINER-DEF'):
-            self.containers.append(Container(containerNode, True))
+            self.__containers.append(Container(containerNode, True))
 
     def get_containers(self):
-        return self.containers
+        return self.__containers
 
 #Representation of autosar container node
 class Container(AutosarNode):
     def __init__(self, node, isChoiceContainer):
         super().__init__(node)
-        self.isChoiceContainer = isChoiceContainer
-        self.isMultiInstance = False
+        self.__isChoiceContainer = isChoiceContainer
+        self.__isMultiInstance = False
 
         multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
         if multiInstanceNode is not None and (multiInstanceNode.text == '*' or int(multiInstanceNode.text) > 1):
-            self.isMultiInstance = True
+            self.__isMultiInstance = True
         else:
             multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
             if multiInstanceNode is not None and multiInstanceNode.text == 'true':
-                self.isMultiInstance = True
+                self.__isMultiInstance = True
 
-        self.subcontainers = []
+        self.__subcontainers = []
         for containerNode in node.findall('{*}SUB-CONTAINERS/{*}ECUC-PARAM-CONF-CONTAINER-DEF'):
-            self.subcontainers.append(Container(containerNode, False))
+            self.__subcontainers.append(Container(containerNode, False))
         for containerNode in node.findall('{*}SUB-CONTAINERS/{*}ECUC-CHOICE-CONTAINER-DEF'):
-            self.subcontainers.append(Container(containerNode, True))
+            self.__subcontainers.append(Container(containerNode, True))
         for containerNode in node.findall('{*}CHOICES/{*}ECUC-PARAM-CONF-CONTAINER-DEF'):
-            self.subcontainers.append(Container(containerNode, False))
+            self.__subcontainers.append(Container(containerNode, False))
         
-        self.parameters = []
-        self.__build_parameters(self.xmlNode)
-        self.references = []
-        self.__build_references(self.xmlNode)
+        self.__parameters = []
+        self.__build_parameters(node)
+        self.__references = []
+        self.__build_references(node)
 
     def __build_parameters(self, containerNode):
         parametersNode = containerNode.find('{*}PARAMETERS')
         if parametersNode is not None:
             for param in parametersNode.findall('{*}ECUC-INTEGER-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.INTEGER))
+                self.__parameters.append(Parameter(param, ParameterTypes.INTEGER))
             for param in parametersNode.findall('{*}ECUC-BOOLEAN-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.BOOLEAN))
+                self.__parameters.append(Parameter(param, ParameterTypes.BOOLEAN))
             for param in parametersNode.findall('{*}ECUC-FLOAT-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.FLOAT))
+                self.__parameters.append(Parameter(param, ParameterTypes.FLOAT))
             for param in parametersNode.findall('{*}ECUC-STRING-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.STRING))
+                self.__parameters.append(Parameter(param, ParameterTypes.STRING))
             for param in parametersNode.findall('{*}ECUC-ENUMERATION-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.ENUMERATION))
+                self.__parameters.append(Parameter(param, ParameterTypes.ENUMERATION))
             for param in parametersNode.findall('{*}ECUC-FUNCTION-PARAM-DEF'):
-                self.parameters.append(Parameter(param, ParameterTypes.FUNCTION))
+                self.__parameters.append(Parameter(param, ParameterTypes.FUNCTION))
 
     def __build_references(self, containerNode):
         referencesNode = containerNode.find('{*}REFERENCES')
         if referencesNode is not None:
             for reference in referencesNode.findall('{*}ECUC-REFERENCE-DEF'):
-                self.references.append(Reference(reference, ReferenceTypes.SIMPLE_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.SIMPLE_REFERENCE))
             for reference in referencesNode.findall('{*}ECUC-CHOICE-REFERENCE-DEF'):
-                self.references.append(Reference(reference, ReferenceTypes.CHOICE_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.CHOICE_REFERENCE))
             for reference in referencesNode.findall('{*}ECUC-FOREIGN-REFERENCE-DEF'):
-                self.references.append(Reference(reference, ReferenceTypes.FOREIGN_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.FOREIGN_REFERENCE))
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
     def is_multi_instance_container(self):
-        return self.isMultiInstance
+        return self.__isMultiInstance
 
     def get_sub_containers(self):
-        return self.subcontainers
+        return self.__subcontainers
 
     def get_parameters(self):
-        return self.parameters
+        return self.__parameters
 
     def get_references(self):
-        return self.references
+        return self.__references
 
 #Representation of autosar parameter node
 class Parameter(AutosarNode):
     def __init__(self, node, parameterType):
         super().__init__(node)
-        self.parameterType = parameterType
+        self.__parameterType = parameterType
         
-        self.defaultValue = None
-        self.isDefaultSet = False
+        self.__defaultValue = None
+        self.__isDefaultSet = False
         self.__set_default_value(node)
         
-        self.minValue = None
-        self.isMinValueSet = False
+        self.__minValue = None
+        self.__isMinValueSet = False
         self.__set_min_max_value(node, True)
 
-        self.maxValue = None
-        self.isMaxValueSet = False
+        self.__maxValue = None
+        self.__isMaxValueSet = False
         self.__set_min_max_value(node, False)
 
-        self.enumLiterals = []
+        self.__enumLiterals = []
         if parameterType == ParameterTypes.ENUMERATION:
             for literal in node.findall('{*}LITERALS/{*}ECUC-ENUMERATION-LITERAL-DEF/{*}SHORT-NAME'):
-                self.enumLiterals.append(literal.text)
+                self.__enumLiterals.append(literal.text)
 
     def __set_default_value(self, node):
         defaultValueNode = node.find('{*}DEFAULT-VALUE')
         if defaultValueNode is not None:
-            self.isDefaultSet = True
-            if self.parameterType == ParameterTypes.BOOLEAN:
-                self.defaultValue = True if defaultValueNode.text.lower() == 'true' else False
-            elif self.parameterType == ParameterTypes.INTEGER or self.parameterType == ParameterTypes.FLOAT:
-                self.defaultValue = defaultValueNode.text if defaultValueNode.text != '' else None
+            self.__isDefaultSet = True
+            if self.__parameterType == ParameterTypes.BOOLEAN:
+                self.__defaultValue = True if defaultValueNode.text.lower() == 'true' else False
+            elif self.__parameterType == ParameterTypes.INTEGER or self.__parameterType == ParameterTypes.FLOAT:
+                self.__defaultValue = defaultValueNode.text if defaultValueNode.text != '' else None
             else:
-                self.defaultValue =  '\''+ defaultValueNode.text + '\'' if defaultValueNode.text != '' else None
+                self.__defaultValue =  '\''+ defaultValueNode.text + '\'' if defaultValueNode.text != '' else None
 
     def __set_min_max_value(self, node, isMinValue):
-        if self.parameterType == ParameterTypes.INTEGER or self.parameterType == ParameterTypes.FLOAT:            
+        if self.__parameterType == ParameterTypes.INTEGER or self.__parameterType == ParameterTypes.FLOAT:            
             valueNode = node.find('{*}' + ('MIN' if isMinValue else 'MAX'))
             if valueNode is not None:
                 if isMinValue:
-                    self.minValue = valueNode.text
-                    self.isMinValueSet = True
+                    self.__minValue = valueNode.text
+                    self.__isMinValueSet = True
                 else:
-                    self.maxValue = sys.maxsize if valueNode.text.lower() == 'inf' else valueNode.text
-                    self.isMaxValueSet = True
+                    self.__maxValue = sys.maxsize if valueNode.text.lower() == 'inf' else valueNode.text
+                    self.__isMaxValueSet = True
 
     def get_type(self):
-        return self.parameterType
+        return self.__parameterType
 
     #gets the default value if configured in the definition file
     def get_default_value(self):
-        return self.defaultValue
+        return self.__defaultValue
 
     def is_default_value_set(self):
-        return self.isDefaultSet
+        return self.__isDefaultSet
 
     #gets the min value of interger/float parameter if configured in the definition file
     def get_min_value(self):
-        return self.minValue
+        return self.__minValue
     
     def is_min_value_set(self):
-        return self.isMinValueSet
+        return self.__isMinValueSet
 
     #gets the max value of interger/float parameter if configured in the definition file
     def get_max_value(self):
-        return self.maxValue
+        return self.__maxValue
     
     def is_max_value_set(self):
-        return self.isMaxValueSet
+        return self.__isMaxValueSet
     
     def get_enum_literals(self):
-        return self.enumLiterals
+        return self.__enumLiterals
 
 #Representation of autosar reference node
 class Reference(AutosarNode):
     def __init__(self, node, referenceType):
         super().__init__(node)
-        self.referenceType = referenceType
-        self.targetRef = None
-        self.targetRefs = []
-        self.targetType = None
+        self.__referenceType = referenceType
+        self.__targetRef = None
+        self.__targetRefs = []
+        self.__targetType = None
         self.__set_detinations(node)
-        self.isMultiInstance = False
+        self.__isMultiInstance = False
 
         multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
         if multiInstanceNode is not None and (multiInstanceNode.text == '*' or int(multiInstanceNode.text) > 1):
-            self.isMultiInstance = True
+            self.__isMultiInstance = True
         else:
             multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
             if multiInstanceNode is not None and multiInstanceNode.text == 'true':
-                self.isMultiInstance = True
+                self.__isMultiInstance = True
 
     def __set_detinations(self, node):
-        if self.referenceType == ReferenceTypes.SIMPLE_REFERENCE:
+        if self.__referenceType == ReferenceTypes.SIMPLE_REFERENCE:
             destinationRef = node.find('{*}DESTINATION-REF')
             if destinationRef is not None:
-                self.targetRef = destinationRef.text
+                self.__targetRef = destinationRef.text
 
-        if self.referenceType == ReferenceTypes.CHOICE_REFERENCE:
+        if self.__referenceType == ReferenceTypes.CHOICE_REFERENCE:
             for destinationRef in node.findall('{*}DESTINATION-REFS/{*}DESTINATION-REF'):
                 if destinationRef is not None:
-                    self.targetRefs.append(destinationRef.text)
+                    self.__targetRefs.append(destinationRef.text)
 
-        if self.referenceType == ReferenceTypes.FOREIGN_REFERENCE:
+        if self.__referenceType == ReferenceTypes.FOREIGN_REFERENCE:
             destinationType = node.find('{*}DESTINATION-TYPE')
             if destinationType is not None:
-                self.targetType = destinationType.text
+                self.__targetType = destinationType.text
 
     def get_type(self):
-        return self.referenceType
+        return self.__referenceType
     
     def is_multi_instance_reference(self):
-        return self.isMultiInstance
+        return self.__isMultiInstance
 
     #gets the target reference for simple reference if configured in the definition file
     def get_destination(self):
-        return self.targetRef
+        return self.__targetRef
     
     #gets the target references for choice reference if configured in the definition file
     def get_destinations(self):
-        return self.targetRefs
+        return self.__targetRefs
     
     #gets the target type for foreign reference if configured in the definition file
     def get_destination_type(self):
-        return self.targetType
+        return self.__targetType

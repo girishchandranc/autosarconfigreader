@@ -4,9 +4,9 @@ import logging, os, time
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
-version = '0.1.0'
-inputFile =''
-outputFolder =''
+__version = '0.1.4'
+__inputFile =''
+__outputFolder =''
 
 def main():
     arguments = parseArguments()
@@ -14,12 +14,12 @@ def main():
         fileProcessor = AutosarFileProcessor(arguments.get_input_file(), arguments.get_module())
         if fileProcessor.get_status() == FileReaderStatus.MODULE_FOUND:
             logging.info('Module {} found in the input file!'.format(arguments.get_module()))
-            generate(fileProcessor.build_module(), arguments.get_output_folder())
+            __generate(fileProcessor.build_module(), arguments.get_output_folder())
             logging.info('Generation successful!')
         else:
             logging.error('Module {} not found in the input file!'.format(arguments.get_module()))
 
-def generate(module, outputFolder):
+def __generate(module, outputFolder):
     Path(outputFolder).mkdir(parents=True, exist_ok=True) #create output folder if doesn't exist
     moduleFolder = os.path.join(outputFolder, module.get_name())
     Path(moduleFolder).mkdir(parents=True, exist_ok=True) #create folder with module name if doesn't exist

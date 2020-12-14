@@ -1,6 +1,6 @@
 """
 The python file contains the different classes for accessing the containers and parameters of the 'demo' module.
-This file is generated for the module 'demo' on Mon Dec 14 14:33:38 2020.
+This file is generated for the module 'demo' on Mon Dec 14 16:03:00 2020.
 """
 
 from lxml import etree
@@ -58,7 +58,8 @@ def get_nodes_for_definition_path(path):
     """
     Returns the autosar nodes for the corresponding definition path.
 
-    @param path: The fully qualified autosar path starting from the module name for eg: /Module/Container1.
+    @param path: The fully qualified autosar path starting from the module name 
+                 and avoiding the Ar-package(eg: /Module/Container1).
     @return:  The nodes corresponding to the path or None if the node for path is not available.
     """
     if path in definitionPathToNodesDict:
@@ -68,20 +69,29 @@ def get_nodes_for_definition_path(path):
 
 # Base class for all autosar nodes
 class AutosarNode:
-    def __init__(self, node, definitionName, definitionPath):
-        self.node = node
-        self.name = None
+    def __init__(self, parent, node, definitionName, definitionPath):
+        """
+        Constructor for any Autosar node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        @param definitionName: The definition short name of the node.
+        @param definitionPath: The fully qualified path of the definition node.
+        """
+        self.__parent = parent
+        self.__node = node
+        self.__name = None
         shortNameNode = node.find('{*}SHORT-NAME')
         if shortNameNode is not None:
-            self.name = shortNameNode.text
+            self.__name = shortNameNode.text
         else:
-            self.name = definitionName
-        self.definitionName = definitionName
+            self.__name = definitionName
+        self.__definitionName = definitionName
         names = []
-        names.append(self.name)
+        names.append(self.__name)
         self.__compute_path(node.getparent(), names)
-        self.path = self.__build_path(reversed(names))
-        pathsToNodeDict[self.path] = self
+        self.__path = self.__build_path(reversed(names))
+        pathsToNodeDict[self.__path] = self
 
         if definitionPath == self.__get_definition_path_of_node(node):
             if definitionPath not in definitionPathToNodesDict:
@@ -122,26 +132,34 @@ class AutosarNode:
             definitionPath = self.__build_path(resulantDefNames)
         return definitionPath
 
+    def get_parent(self):
+        return self.__parent
+
     def get_short_name(self):
-        return self.name
+        return self.__name
 
     def get_definition_name(self):
-        return self.definitionName
+        return self.__definitionName
     
     def get_node(self):
-        return self.node
+        return self.__node
     
     def get_path(self):
-        return self.path
+        return self.__path
 
 # Module configuration node(root node for the respective module)
 class demo(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, 'demo', '/demo')
+        """
+        Constructor for demo node.
+
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(None, node, 'demo', '/demo')
         
-        self.contA = None
-        self.contBs = []
-        self.contCs = []
+        self.__contA = None
+        self.__contBs = []
+        self.__contCs = []
 
 
         for container in node.findall('{*}CONTAINERS/{*}ECUC-CONTAINER-VALUE'):
@@ -149,332 +167,392 @@ class demo(AutosarNode):
             if definitionRef is not None:
                 definitionName = definitionRef.split('/').pop()
                 if definitionName == 'contA':
-                    self.contA = contA(container)
+                    self.__contA = contA(self, container)
                 elif definitionName == 'contB':
-                    self.contBs.append(contB(container))
+                    self.__contBs.append(contB(self, container))
                 elif definitionName == 'contC':
-                    self.contCs.append(contC(container))
+                    self.__contCs.append(contC(self, container))
 
     
 
     #Returns the configuration container contA
     def get_contA(self):
-        return self.contA  
+        return self.__contA  
 
     #Returns the configuration container contB
     def get_contBs(self):
-        return self.contBs  
+        return self.__contBs  
 
     #Returns the configuration container contC
     def get_contCs(self):
-        return self.contCs  
+        return self.__contCs  
 
 
 
 # Container configuration node for contA
 class contA(AutosarNode):
-    def __init__(self, node):
-        super().__init__(node, 'contA', '/demo/contA')
-        self.isChoiceContainer = False
+    def __init__(self, parent, node):
+        """
+        Constructor for contA node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(parent, node, 'contA', '/demo/contA')
+        self.__isChoiceContainer = False
         #parameters
-        self.boolParam_value = None
-        self.enumParam_value = None
+        self.__boolParam_value = None
+        self.__enumParam_value = None
 
         for parameter in node.findall('{*}PARAMETER-VALUES/*'):
             definitionRef = parameter.find('{*}DEFINITION-REF').text
             if definitionRef is not None:
                 definitionName = definitionRef.split('/').pop()
                 if definitionName == 'boolParam':
-                    self.boolParam_value = self.boolParam(parameter)
+                    self.__boolParam_value = self.boolParam(self, parameter)
                 elif definitionName == 'enumParam':
-                    self.enumParam_value = self.enumParam(parameter)
+                    self.__enumParam_value = self.enumParam(self, parameter)
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
 
     #Returns the parameter boolParam
     def get_boolParam(self):
-        return self.boolParam_value
+        return self.__boolParam_value
 
     #Returns the parameter enumParam
     def get_enumParam(self):
-        return self.enumParam_value
+        return self.__enumParam_value
 
 
 
     # Parameter configuration node for boolParam
     class boolParam(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'boolParam', '/demo/contA/boolParam')
-            self.value = None
+        def __init__(self, parent, node):
+            """
+            Constructor for boolParam node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'boolParam', '/demo/contA/boolParam')
+            self.__value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
             if paramValue is not None and paramValue == '1':
-                self.value = True
+                self.__value = True
             else:
-                self.value = False
+                self.__value = False
 
-            self.type = ParameterTypes.BOOLEAN
-            self.isDefaultValueSet = True
-            self.defaultValue = False
+            self.__type = ParameterTypes.BOOLEAN
+            self.__isDefaultValueSet = True
+            self.__defaultValue = False
 
         #Get the parameter value
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
-            return self.type
+            return self.__type
     
         def is_default_value_set(self):
-            return self.isDefaultValueSet
+            return self.__isDefaultValueSet
     
         def get_default_value(self):
-            return self.defaultValue
+            return self.__defaultValue
     
 
 
 
     # Parameter configuration node for enumParam
     class enumParam(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'enumParam', '/demo/contA/enumParam')
-            self.value = None
+        def __init__(self, parent, node):
+            """
+            Constructor for enumParam node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'enumParam', '/demo/contA/enumParam')
+            self.__value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
-            self.value = paramValue
-            self.type = ParameterTypes.ENUMERATION
-            self.isDefaultValueSet = True
-            self.defaultValue = 'GREEN'
-            self.enumLiterals = ['RED', 'YELLOW', 'GREEN']
+            self.__value = paramValue
+            self.__type = ParameterTypes.ENUMERATION
+            self.__isDefaultValueSet = True
+            self.__defaultValue = 'GREEN'
+            self.__enumLiterals = ['RED', 'YELLOW', 'GREEN']
 
         #Get the parameter value
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
-            return self.type
+            return self.__type
     
         def is_default_value_set(self):
-            return self.isDefaultValueSet
+            return self.__isDefaultValueSet
     
         def get_default_value(self):
-            return self.defaultValue
+            return self.__defaultValue
     
 
         def get_enum_literals(self):
-            return self.enumLiterals
+            return self.__enumLiterals
 
 
 
 # Container configuration node for contB
 class contB(AutosarNode):
-    def __init__(self, node):
-        super().__init__(node, 'contB', '/demo/contB')
-        self.isChoiceContainer = False
+    def __init__(self, parent, node):
+        """
+        Constructor for contB node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(parent, node, 'contB', '/demo/contB')
+        self.__isChoiceContainer = False
         #containers
-        self.subConts = []
+        self.__subConts = []
 
         for subContainer in node.findall('{*}SUB-CONTAINERS/{*}ECUC-CONTAINER-VALUE'):
             definitionRef = subContainer.find('{*}DEFINITION-REF').text
             if definitionRef is not None:
                 definitionName = definitionRef.split('/').pop()
                 if definitionName == 'subCont':
-                    self.subConts.append(subCont(subContainer))
+                    self.__subConts.append(subCont(self, subContainer))
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
 
     #Returns the configuration container subCont
     def get_subConts(self):
-        return self.subConts  
+        return self.__subConts  
 
 
 # Container configuration node for subCont
 class subCont(AutosarNode):
-    def __init__(self, node):
-        super().__init__(node, 'subCont', '/demo/contB/subCont')
-        self.isChoiceContainer = False
+    def __init__(self, parent, node):
+        """
+        Constructor for subCont node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(parent, node, 'subCont', '/demo/contB/subCont')
+        self.__isChoiceContainer = False
         #parameters
-        self.intParam_value = None
+        self.__intParam_value = None
 
         for parameter in node.findall('{*}PARAMETER-VALUES/*'):
             definitionRef = parameter.find('{*}DEFINITION-REF').text
             if definitionRef is not None:
                 definitionName = definitionRef.split('/').pop()
                 if definitionName == 'intParam':
-                    self.intParam_value = self.intParam(parameter)
+                    self.__intParam_value = self.intParam(self, parameter)
         #references
-        self.ref1_value = None
-        self.ref2_values = []
-        self.foreignRef_value = None
+        self.__ref1_value = None
+        self.__ref2_values = []
+        self.__foreignRef_value = None
 
         for reference in node.findall('{*}REFERENCE-VALUES/*'):
             definitionRef = reference.find('{*}DEFINITION-REF').text
             if definitionRef is not None:
                 definitionName = definitionRef.split('/').pop()
                 if definitionName == 'ref1':
-                    self.ref1_value = self.ref1(reference)
+                    self.__ref1_value = self.ref1(self, reference)
                 elif definitionName == 'ref2':
-                    self.ref2_values.append(self.ref2(reference))
+                    self.__ref2_values.append(self.ref2(self, reference))
                 elif definitionName == 'foreignRef':
-                    self.foreignRef_value = self.foreignRef(reference)
+                    self.__foreignRef_value = self.foreignRef(self, reference)
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
 
     #Returns the parameter intParam
     def get_intParam(self):
-        return self.intParam_value
+        return self.__intParam_value
 
     #Returns the reference ref1
     def get_ref1(self):
-        return self.ref1_value
+        return self.__ref1_value
 
     #Returns the reference ref2
     def get_ref2s(self):
-        return self.ref2_values
+        return self.__ref2_values
 
     #Returns the reference foreignRef
     def get_foreignRef(self):
-        return self.foreignRef_value
+        return self.__foreignRef_value
 
 
 
     # Parameter configuration node for intParam
     class intParam(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'intParam', '/demo/contB/subCont/intParam')
-            self.value = None
+        def __init__(self, parent, node):
+            """
+            Constructor for intParam node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'intParam', '/demo/contB/subCont/intParam')
+            self.__value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
             if paramValue is not None:
-                self.value = int(paramValue)
+                self.__value = int(paramValue)
 
-            self.type = ParameterTypes.INTEGER
-            self.isDefaultValueSet = False
-            self.defaultValue = None
-            self.isMinValueSet = True
-            self.min = 0
-            self.isMaxValueSet = True
-            self.max = 65535
+            self.__type = ParameterTypes.INTEGER
+            self.__isDefaultValueSet = False
+            self.__defaultValue = None
+            self.__isMinValueSet = True
+            self.__min = 0
+            self.__isMaxValueSet = True
+            self.__max = 65535
 
 
         #Get the parameter value
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
-            return self.type
+            return self.__type
     
         def is_default_value_set(self):
-            return self.isDefaultValueSet
+            return self.__isDefaultValueSet
     
         def get_default_value(self):
-            return self.defaultValue
+            return self.__defaultValue
     
 
         def is_min_value_set(self):
-            return self.isMinValueSet
+            return self.__isMinValueSet
     
         def get_min_value(self):
-            return self.min
+            return self.__min
     
         def is_max_value_set(self):
-            return self.isMaxValueSet
+            return self.__isMaxValueSet
     
         def get_max_value(self):
-            return self.max
+            return self.__max
 
 
 
     # Reference configuration node for ref1
     class ref1(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'ref1', '/demo/contB/subCont/ref1')
+        def __init__(self, parent, node):
+            """
+            Constructor for ref1 node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'ref1', '/demo/contB/subCont/ref1')
             valueNode = node.find('{*}VALUE-REF')
-            self.value = valueNode.text if valueNode is not None else None
-            self.type = ReferenceTypes.SIMPLE_REFERENCE
-            self.destinationRef = '/ModuleDef/demo_other/contA'
+            self.__value = valueNode.text if valueNode is not None else None
+            self.__type = ReferenceTypes.SIMPLE_REFERENCE
+            self.__destinationRef = '/ModuleDef/demo_other/contA'
 
 
         #Get the referenced node
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
-            return self.type
+            return self.__type
     
 
         #Gets the value of DESTINATION-REF from the definition file.
         def get_destination_ref(self):
-            return self.destinationRef
+            return self.__destinationRef
 
 
 
     # Reference configuration node for ref2
     class ref2(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'ref2', '/demo/contB/subCont/ref2')
+        def __init__(self, parent, node):
+            """
+            Constructor for ref2 node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'ref2', '/demo/contB/subCont/ref2')
             valueNode = node.find('{*}VALUE-REF')
-            self.value = valueNode.text if valueNode is not None else None
-            self.type = ReferenceTypes.SIMPLE_REFERENCE
-            self.destinationRef = '/ModuleDef/demo/contC'
+            self.__value = valueNode.text if valueNode is not None else None
+            self.__type = ReferenceTypes.SIMPLE_REFERENCE
+            self.__destinationRef = '/ModuleDef/demo/contC'
 
 
         #Get the referenced node
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
-            return self.type
+            return self.__type
     
 
         #Gets the value of DESTINATION-REF from the definition file.
         def get_destination_ref(self):
-            return self.destinationRef
+            return self.__destinationRef
 
 
 
     # Reference configuration node for foreignRef
     class foreignRef(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, 'foreignRef', '/demo/contB/subCont/foreignRef')
+        def __init__(self, parent, node):
+            """
+            Constructor for foreignRef node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, 'foreignRef', '/demo/contB/subCont/foreignRef')
             valueNode = node.find('{*}VALUE-REF')
-            self.value = valueNode.text if valueNode is not None else None
-            self.type = ReferenceTypes.FOREIGN_REFERENCE
-            self.destinationType = 'SW-COMPONENT-PROTOTYPE'
+            self.__value = valueNode.text if valueNode is not None else None
+            self.__type = ReferenceTypes.FOREIGN_REFERENCE
+            self.__destinationType = 'SW-COMPONENT-PROTOTYPE'
 
         #Get the referenced node
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
-            return self.type
+            return self.__type
     
 
         #Gets the value of DESTINATION-TYPE from the definition file for FOREIGN_REFERENCE.
         def get_destination_type(self):
-            return self.destinationType
+            return self.__destinationType
 
 
 
 # Container configuration node for contC
 class contC(AutosarNode):
-    def __init__(self, node):
-        super().__init__(node, 'contC', '/demo/contC')
-        self.isChoiceContainer = False
+    def __init__(self, parent, node):
+        """
+        Constructor for contC node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(parent, node, 'contC', '/demo/contC')
+        self.__isChoiceContainer = False
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
 
 

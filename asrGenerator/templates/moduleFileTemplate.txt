@@ -70,20 +70,29 @@ def get_nodes_for_definition_path(path):
 
 # Base class for all autosar nodes
 class AutosarNode:
-    def __init__(self, node, definitionName, definitionPath):
-        self.node = node
-        self.name = None
+    def __init__(self, parent, node, definitionName, definitionPath):
+        """
+        Constructor for any Autosar node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        @param definitionName: The definition short name of the node.
+        @param definitionPath: The fully qualified path of the definition node.
+        """
+        self.__parent = parent
+        self.__node = node
+        self.__name = None
         shortNameNode = node.find('{*}SHORT-NAME')
         if shortNameNode is not None:
-            self.name = shortNameNode.text
+            self.__name = shortNameNode.text
         else:
-            self.name = definitionName
-        self.definitionName = definitionName
+            self.__name = definitionName
+        self.__definitionName = definitionName
         names = []
-        names.append(self.name)
+        names.append(self.__name)
         self.__compute_path(node.getparent(), names)
-        self.path = self.__build_path(reversed(names))
-        pathsToNodeDict[self.path] = self
+        self.__path = self.__build_path(reversed(names))
+        pathsToNodeDict[self.__path] = self
 
         if definitionPath == self.__get_definition_path_of_node(node):
             if definitionPath not in definitionPathToNodesDict:
@@ -124,27 +133,35 @@ class AutosarNode:
             definitionPath = self.__build_path(resulantDefNames)
         return definitionPath
 
+    def get_parent(self):
+        return self.__parent
+
     def get_short_name(self):
-        return self.name
+        return self.__name
 
     def get_definition_name(self):
-        return self.definitionName
+        return self.__definitionName
     
     def get_node(self):
-        return self.node
+        return self.__node
     
     def get_path(self):
-        return self.path
+        return self.__path
 
 # Module configuration node(root node for the respective module)
 class {{ module.get_name() }}(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, '{{ module.get_name() }}', '{{ module.get_path() }}')
+        """
+        Constructor for {{ module.get_name() }} node.
+
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(None, node, '{{ module.get_name() }}', '{{ module.get_path() }}')
         {% for container in module.get_containers() -%}
             {%- if container.is_multi_instance_container() %}
-        self.{{ container.get_name() }}s = []
+        self.__{{ container.get_name() }}s = []
             {%- else %}
-        self.{{ container.get_name() }} = None
+        self.__{{ container.get_name() }} = None
             {%- endif %}  
         {%- endfor %}
 
@@ -160,9 +177,9 @@ class {{ module.get_name() }}(AutosarNode):
                 elif definitionName == '{{ container.get_name() }}':
                 {%- endif %}
                 {%- if container.is_multi_instance_container() %}
-                    self.{{ container.get_name() }}s.append({{ container.get_name() }}(container))
+                    self.__{{ container.get_name() }}s.append({{ container.get_name() }}(self, container))
                 {%- else %}
-                    self.{{ container.get_name() }} = {{ container.get_name() }}(container)
+                    self.__{{ container.get_name() }} = {{ container.get_name() }}(self, container)
                 {%- endif %}  
             {%- endfor %}
 
@@ -171,10 +188,10 @@ class {{ module.get_name() }}(AutosarNode):
     #Returns the configuration container {{ container.get_name() }}
     {%- if container.is_multi_instance_container() %}
     def get_{{ container.get_name() }}s(self):
-        return self.{{ container.get_name() }}s
+        return self.__{{ container.get_name() }}s
     {%- else %}
     def get_{{ container.get_name() }}(self):
-        return self.{{ container.get_name() }}
+        return self.__{{ container.get_name() }}
     {%- endif %}  
 {% endfor %}
 

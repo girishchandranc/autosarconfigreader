@@ -201,6 +201,25 @@ class TestGeneratedModule(unittest.TestCase):
         self.assertEqual(ref2.get_value(), '/ModuleConfig/demo/ContC_conf_1', "value of ref2 is /ModuleConfig/demo/ContC_conf_1")
         actualRefNode = demo.get_node(ref2.get_value())
         self.assertTrue(actualRefNode is None, "the referenced node is None")
+    
+    def test_get_parent(self):
+        """
+        Test that the get_parent returns the parent node
+        of the container/prameter/reference.
+        """
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        contB = demo.get_node('/ModuleConfig/demo/ContB_conf_0')
+        self.assertTrue(contB is not None, "cannot be None")
+        self.assertTrue(contB.get_parent() is not None, "parent cannot be None")
+        self.assertEqual(contB.get_parent().get_short_name(), 'demo' , "parents short name is demo")
+        self.assertEqual(contB.get_parent(), module , "the nodes should be equal")
+
+        ref = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+        self.assertTrue(ref is not None, "cannot be None")
+        self.assertTrue(ref.get_parent() is not None, "parent cannot be None")
+        self.assertEqual(ref.get_parent().get_short_name(), 'subCont_conf' , "parents short name is subCont_conf")
+        self.assertEqual(ref.get_parent().get_parent().get_parent(), module , "the nodes should be equal")
+        self.assertEqual(ref.get_parent().get_parent(), module.get_contBs()[0] , "the nodes should be equal")
 
 if __name__ == '__main__':
     unittest.main()

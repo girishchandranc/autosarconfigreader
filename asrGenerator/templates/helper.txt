@@ -1,17 +1,23 @@
 {%- macro createContainerClass(container) -%}
 # Container configuration node for {{ container.get_name() }}
 class {{ container.get_name() }}(AutosarNode):
-    def __init__(self, node):
-        super().__init__(node, '{{ container.get_name() }}', '{{ container.get_path() }}')
-        self.isChoiceContainer = {{ container.is_choice_container() }}
+    def __init__(self, parent, node):
+        """
+        Constructor for {{ container.get_name() }} node.
+
+        @param parent: The parent node under which the autosar node needs to be created.
+        @param node: The xml node for which the autosar node needs to be created.
+        """
+        super().__init__(parent, node, '{{ container.get_name() }}', '{{ container.get_path() }}')
+        self.__isChoiceContainer = {{ container.is_choice_container() }}
 
         {%- if container.get_sub_containers()|length > 0 %}
         #containers
             {%- for subContainer in container.get_sub_containers() %}
                 {%- if subContainer.is_multi_instance_container() %}
-        self.{{ subContainer.get_name() }}s = []
+        self.__{{ subContainer.get_name() }}s = []
                 {%- else %}
-        self.{{ subContainer.get_name() }} = None
+        self.__{{ subContainer.get_name() }} = None
                 {%- endif %}
             {%- endfor %}
 
@@ -26,9 +32,9 @@ class {{ container.get_name() }}(AutosarNode):
                 elif definitionName == '{{ subContainer.get_name() }}':
                 {%- endif %}
                 {%- if subContainer.is_multi_instance_container() %}
-                    self.{{ subContainer.get_name() }}s.append({{ subContainer.get_name() }}(subContainer))
+                    self.__{{ subContainer.get_name() }}s.append({{ subContainer.get_name() }}(self, subContainer))
                 {%- else %}
-                    self.{{ subContainer.get_name() }} = {{ subContainer.get_name() }}(subContainer)
+                    self.__{{ subContainer.get_name() }} = {{ subContainer.get_name() }}(self, subContainer)
                 {%- endif %}  
             {%- endfor %}
         {%- endif %}
@@ -36,7 +42,7 @@ class {{ container.get_name() }}(AutosarNode):
         {%- if container.get_parameters()|length > 0 %}
         #parameters
             {%- for parameter in container.get_parameters() %}
-        self.{{ parameter.get_name() }}_value = None
+        self.__{{ parameter.get_name() }}_value = None
             {%- endfor %}
 
         for parameter in node.findall('{*}PARAMETER-VALUES/*'):
@@ -49,7 +55,7 @@ class {{ container.get_name() }}(AutosarNode):
             {%- else %}
                 elif definitionName == '{{ parameter.get_name() }}':
             {%- endif %}
-                    self.{{ parameter.get_name() }}_value = self.{{ parameter.get_name() }}(parameter)
+                    self.__{{ parameter.get_name() }}_value = self.{{ parameter.get_name() }}(self, parameter)
             {%- endfor %}
         {%- endif %}
 
@@ -57,9 +63,9 @@ class {{ container.get_name() }}(AutosarNode):
         #references
             {%- for reference in container.get_references() %}
                 {%- if reference.is_multi_instance_reference() %}
-        self.{{ reference.get_name() }}_values = []
+        self.__{{ reference.get_name() }}_values = []
                 {%- else %}
-        self.{{ reference.get_name() }}_value = None
+        self.__{{ reference.get_name() }}_value = None
                 {%- endif %}
             {%- endfor %}
 
@@ -74,147 +80,159 @@ class {{ container.get_name() }}(AutosarNode):
                 elif definitionName == '{{ reference.get_name() }}':
             {%- endif %}
             {%- if reference.is_multi_instance_reference() %}
-                    self.{{ reference.get_name() }}_values.append(self.{{ reference.get_name() }}(reference))
+                    self.__{{ reference.get_name() }}_values.append(self.{{ reference.get_name() }}(self, reference))
             {%- else %}
-                    self.{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(reference)
+                    self.__{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(self, reference)
             {%- endif %}
             {%- endfor %}
         {%- endif %}
 
     def is_choice_container(self):
-        return self.isChoiceContainer
+        return self.__isChoiceContainer
 
 {% for subContainer in container.get_sub_containers() %}
     #Returns the configuration container {{ subContainer.get_name() }}
     {%- if subContainer.is_multi_instance_container() %}
     def get_{{ subContainer.get_name() }}s(self):
-        return self.{{ subContainer.get_name() }}s
+        return self.__{{ subContainer.get_name() }}s
     {%- else %}
     def get_{{ subContainer.get_name() }}(self):
-        return self.{{ subContainer.get_name() }}
+        return self.__{{ subContainer.get_name() }}
     {%- endif %}  
 {% endfor -%}
 
 {%- for parameter in container.get_parameters() %}
     #Returns the parameter {{ parameter.get_name() }}
     def get_{{ parameter.get_name() }}(self):
-        return self.{{ parameter.get_name() }}_value
+        return self.__{{ parameter.get_name() }}_value
 {% endfor -%}
 
 {%- for reference in container.get_references() %}
     #Returns the reference {{ reference.get_name() }}
     {%- if reference.is_multi_instance_reference() %}
     def get_{{ reference.get_name() }}s(self):
-        return self.{{ reference.get_name() }}_values
-                {%- else %}
+        return self.__{{ reference.get_name() }}_values
+    {%- else %}
     def get_{{ reference.get_name() }}(self):
-        return self.{{ reference.get_name() }}_value
-                {%- endif %}
+        return self.__{{ reference.get_name() }}_value
+    {%- endif %}
 {% endfor -%}
 {%- endmacro %}
 
 {%- macro createParameterClass(parameter, ParameterTypes) %}
     # Parameter configuration node for {{ parameter.get_name() }}
     class {{ parameter.get_name() }}(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, '{{ parameter.get_name() }}', '{{ parameter.get_path() }}')
-            self.value = None
+        def __init__(self, parent, node):
+            """
+            Constructor for {{ parameter.get_name() }} node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, '{{ parameter.get_name() }}', '{{ parameter.get_path() }}')
+            self.__value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
 {%- if parameter.get_type() == ParameterTypes.INTEGER %}
             if paramValue is not None:
-                self.value = int(paramValue)
+                self.__value = int(paramValue)
 {% elif parameter.get_type() == ParameterTypes.FLOAT %}
             if paramValue is not None:
-                self.value = float(paramValue)
+                self.__value = float(paramValue)
 {% elif parameter.get_type() == ParameterTypes.BOOLEAN %}
             if paramValue is not None and paramValue == '1':
-                self.value = True
+                self.__value = True
             else:
-                self.value = False
+                self.__value = False
 {% else %}
-            self.value = paramValue
+            self.__value = paramValue
 {%- endif %}
-            self.type = {{ parameter.get_type() }}
-            self.isDefaultValueSet = {{ parameter.is_default_value_set() }}
-            self.defaultValue = {{ parameter.get_default_value() }}
+            self.__type = {{ parameter.get_type() }}
+            self.__isDefaultValueSet = {{ parameter.is_default_value_set() }}
+            self.__defaultValue = {{ parameter.get_default_value() }}
 {%- if parameter.get_type() == ParameterTypes.INTEGER or parameter.get_type() == ParameterTypes.FLOAT %}
-            self.isMinValueSet = {{ parameter.is_min_value_set() }}
-            self.min = {{ parameter.get_min_value() }}
-            self.isMaxValueSet = {{ parameter.is_max_value_set() }}
-            self.max = {{ parameter.get_max_value() }}
+            self.__isMinValueSet = {{ parameter.is_min_value_set() }}
+            self.__min = {{ parameter.get_min_value() }}
+            self.__isMaxValueSet = {{ parameter.is_max_value_set() }}
+            self.__max = {{ parameter.get_max_value() }}
 {% elif parameter.get_type() == ParameterTypes.ENUMERATION %}
-            self.enumLiterals = {{ parameter.get_enum_literals() }}
+            self.__enumLiterals = {{ parameter.get_enum_literals() }}
 {%- endif %}
 
         #Get the parameter value
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
-            return self.type
+            return self.__type
     
         def is_default_value_set(self):
-            return self.isDefaultValueSet
+            return self.__isDefaultValueSet
     
         def get_default_value(self):
-            return self.defaultValue
+            return self.__defaultValue
     
 {% if parameter.get_type() == ParameterTypes.INTEGER or parameter.get_type() == ParameterTypes.FLOAT %}
         def is_min_value_set(self):
-            return self.isMinValueSet
+            return self.__isMinValueSet
     
         def get_min_value(self):
-            return self.min
+            return self.__min
     
         def is_max_value_set(self):
-            return self.isMaxValueSet
+            return self.__isMaxValueSet
     
         def get_max_value(self):
-            return self.max
+            return self.__max
 {% elif parameter.get_type() == ParameterTypes.ENUMERATION %}
         def get_enum_literals(self):
-            return self.enumLiterals
+            return self.__enumLiterals
 {% endif %}
 {%- endmacro %}
 
 {%- macro createReferenceClass(reference, ReferenceTypes) %}
     # Reference configuration node for {{ reference.get_name() }}
     class {{ reference.get_name() }}(AutosarNode):
-        def __init__(self, node):
-            super().__init__(node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
+        def __init__(self, parent, node):
+            """
+            Constructor for {{ reference.get_name() }} node.
+
+            @param parent: The parent node under which the autosar node needs to be created.
+            @param node: The xml node for which the autosar node needs to be created.
+            """
+            super().__init__(parent, node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
             valueNode = node.find('{*}VALUE-REF')
-            self.value = valueNode.text if valueNode is not None else None
-            self.type = {{ reference.get_type() }}
+            self.__value = valueNode.text if valueNode is not None else None
+            self.__type = {{ reference.get_type() }}
 {%- if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
-            self.destinationRef = '{{ reference.get_destination() }}'
+            self.__destinationRef = '{{ reference.get_destination() }}'
 {% elif reference.get_type() == ReferenceTypes.CHOICE_REFERENCE %}
-            self.destinationRefs = {{ reference.get_destinations() }}
+            self.__destinationRefs = {{ reference.get_destinations() }}
 {% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE %}
-            self.destinationType = '{{ reference.get_destination_type() }}'
+            self.__destinationType = '{{ reference.get_destination_type() }}'
 {%- endif %}
 
         #Get the referenced node
         def get_value(self):
-            return self.value
+            return self.__value
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
-            return self.type
+            return self.__type
     
 {% if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
         #Gets the value of DESTINATION-REF from the definition file.
         def get_destination_ref(self):
-            return self.destinationRef
+            return self.__destinationRef
 {% elif reference.get_type() == ReferenceTypes.CHOICE_REFERENCE %}
         #Gets the value of DESTINATION-REF from the definition file for CHOICE_REFERENCE.
         def get_destination_refs(self):
-            return self.destinationRefs
+            return self.__destinationRefs
 {% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE %}
         #Gets the value of DESTINATION-TYPE from the definition file for FOREIGN_REFERENCE.
         def get_destination_type(self):
-            return self.destinationType
+            return self.__destinationType
 {%- endif %}
 {%- endmacro %}
 
