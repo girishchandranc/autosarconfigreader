@@ -1,6 +1,6 @@
 """
-The python file contains the different classes for accessing the containers and parameters of the 'demo' module.
-This file is generated for the module 'demo' on Sat Dec 12 20:53:18 2020.
+The python file contains the different classes for accessing the containers and parameters of the 'demo_other' module.
+This file is generated for the module 'demo_other' on Mon Dec 14 14:34:32 2020.
 """
 
 from lxml import etree
@@ -12,27 +12,33 @@ ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREI
 
 # dict supposed to be used internally by the module to store the path and its corresponding autosar node
 pathsToNodeDict = {}
+# dict supposed to be used internally by the module to store the instances of autosar node for the definition path
+definitionPathToNodesDict = {}
 
 def read_and_build_module_configuration(file):
     """
-    Reads the module configuration and build the demo structure.
+    Reads the module configuration and build the demo_other structure.
 
     @param file: The configuration arxml file.
-    @return:  The built demo structure. May return None if the given 
+    @return:  The built demo_other structure. May return None if the given 
               file do not contain the module configuration for
-              demo.
+              demo_other.
     """
+    #Clearing the cache if any before building the module
+    pathsToNodeDict.clear()
+    definitionPathToNodesDict.clear()
+
     rootAutosarNode = etree.parse(file)
     moduleConfNode = None
     #{*} is used to consider the wildcard namespace.
     for module in rootAutosarNode.findall('//{*}ECUC-MODULE-CONFIGURATION-VALUES'):
         definitionRef = module.find('{*}DEFINITION-REF').text
-        if definitionRef is not None and definitionRef.split('/').pop() == 'demo':
+        if definitionRef is not None and definitionRef.split('/').pop() == 'demo_other':
             moduleConfNode = module
             break
 
     if moduleConfNode is not None:
-        return demo(moduleConfNode)
+        return demo_other(moduleConfNode)
     else:
         return None
 
@@ -48,9 +54,21 @@ def get_node(path):
     else:
         return None
 
+def get_nodes_for_definition_path(path):
+    """
+    Returns the autosar nodes for the corresponding definition path.
+
+    @param path: The fully qualified autosar path starting from the module name for eg: /Module/Container1.
+    @return:  The nodes corresponding to the path or None if the node for path is not available.
+    """
+    if path in definitionPathToNodesDict:
+        return definitionPathToNodesDict[path]
+    else:
+        return None
+
 # Base class for all autosar nodes
 class AutosarNode:
-    def __init__(self, node, definitionName):
+    def __init__(self, node, definitionName, definitionPath):
         self.node = node
         self.name = None
         shortNameNode = node.find('{*}SHORT-NAME')
@@ -62,8 +80,15 @@ class AutosarNode:
         names = []
         names.append(self.name)
         self.__compute_path(node.getparent(), names)
-        self.path = self.__build_path(names)
+        self.path = self.__build_path(reversed(names))
         pathsToNodeDict[self.path] = self
+
+        if definitionPath == self.__get_definition_path_of_node(node):
+            if definitionPath not in definitionPathToNodesDict:
+                nodes = []
+                definitionPathToNodesDict[definitionPath] = nodes
+
+            definitionPathToNodesDict[definitionPath].append(self)
 
     def __compute_path(self, node, names):
         #get all path until the AUTOSAR root node
@@ -78,9 +103,24 @@ class AutosarNode:
     
     def __build_path(self, names):
         returnValue = ''
-        for name in reversed(names):
+        for name in names:
             returnValue = returnValue + '/' + name
         return returnValue
+    
+    def __get_definition_path_of_node(self, node):
+        definitionPath = None
+        definitionRef = node.find('{*}DEFINITION-REF').text
+        if definitionRef is not None:
+            defNameList = definitionRef.split('/')
+            resulantDefNames = []
+            moduleFound = False
+            for name in defNameList:
+                if name == 'demo_other':
+                    moduleFound = True
+                if moduleFound:
+                    resulantDefNames.append(name)
+            definitionPath = self.__build_path(resulantDefNames)
+        return definitionPath
 
     def get_short_name(self):
         return self.name
@@ -95,9 +135,9 @@ class AutosarNode:
         return self.path
 
 # Module configuration node(root node for the respective module)
-class demo(AutosarNode):
+class demo_other(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, 'demo')
+        super().__init__(node, 'demo_other', '/demo_other')
         
         self.contA = None
         self.contBs = []
@@ -127,7 +167,7 @@ class demo(AutosarNode):
 # Container configuration node for contA
 class contA(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, 'contA')
+        super().__init__(node, 'contA', '/demo_other/contA')
         self.isChoiceContainer = False
         #parameters
         self.boolParam_value = None
@@ -159,7 +199,7 @@ class contA(AutosarNode):
     # Parameter configuration node for boolParam
     class boolParam(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, 'boolParam')
+            super().__init__(node, 'boolParam', '/demo_other/contA/boolParam')
             self.value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
@@ -192,7 +232,7 @@ class contA(AutosarNode):
     # Parameter configuration node for enumParam
     class enumParam(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, 'enumParam')
+            super().__init__(node, 'enumParam', '/demo_other/contA/enumParam')
             self.value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
@@ -225,7 +265,7 @@ class contA(AutosarNode):
 # Container configuration node for contB
 class contB(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, 'contB')
+        super().__init__(node, 'contB', '/demo_other/contB')
         self.isChoiceContainer = False
         #containers
         self.subConts = []
@@ -249,7 +289,7 @@ class contB(AutosarNode):
 # Container configuration node for subCont
 class subCont(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, 'subCont')
+        super().__init__(node, 'subCont', '/demo_other/contB/subCont')
         self.isChoiceContainer = False
         #parameters
         self.intParam_value = None
@@ -294,7 +334,7 @@ class subCont(AutosarNode):
     # Parameter configuration node for intParam
     class intParam(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, 'intParam')
+            super().__init__(node, 'intParam', '/demo_other/contB/subCont/intParam')
             self.value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
@@ -342,7 +382,7 @@ class subCont(AutosarNode):
     # Reference configuration node for ref1
     class ref1(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, 'ref1')
+            super().__init__(node, 'ref1', '/demo_other/contB/subCont/ref1')
             valueNode = node.find('{*}VALUE-REF')
             self.value = valueNode.text if valueNode is not None else None
             self.type = ReferenceTypes.SIMPLE_REFERENCE
@@ -367,7 +407,7 @@ class subCont(AutosarNode):
     # Reference configuration node for foreignRef
     class foreignRef(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, 'foreignRef')
+            super().__init__(node, 'foreignRef', '/demo_other/contB/subCont/foreignRef')
             valueNode = node.find('{*}VALUE-REF')
             self.value = valueNode.text if valueNode is not None else None
             self.type = ReferenceTypes.FOREIGN_REFERENCE

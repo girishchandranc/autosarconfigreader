@@ -41,6 +41,14 @@
                       <VALUE-REF DEST="ECUC-CONTAINER-VALUE">/ModuleConfig/demo_other/ContA_conf</VALUE-REF>
                   </ECUC-REFERENCE-VALUE>
                   <ECUC-REFERENCE-VALUE>
+                        <DEFINITION-REF DEST="ECUC-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/ref2</DEFINITION-REF>
+                        <VALUE-REF DEST="ECUC-CONTAINER-VALUE">/ModuleConfig/demo/ContC_conf_0</VALUE-REF>
+                    </ECUC-REFERENCE-VALUE>
+                  <ECUC-REFERENCE-VALUE>
+                        <DEFINITION-REF DEST="ECUC-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/ref2</DEFINITION-REF>
+                        <VALUE-REF DEST="ECUC-CONTAINER-VALUE">/ModuleConfig/demo/ContC_conf_1</VALUE-REF>
+                    </ECUC-REFERENCE-VALUE>
+                  <ECUC-REFERENCE-VALUE>
                       <DEFINITION-REF DEST="ECUC-FOREIGN-REFERENCE-DEF">/ModuleDef/demo/contB/subCont/foreignRef</DEFINITION-REF>
                       <VALUE-REF DEST="SW-COMPONENT-PROTOTYPE">/Autosar/Components/ComponentA</VALUE-REF>
                   </ECUC-REFERENCE-VALUE>
@@ -58,7 +66,7 @@
                   <PARAMETER-VALUES>
                     <ECUC-NUMERICAL-PARAM-VALUE>
                       <DEFINITION-REF DEST="ECUC-INTEGER-PARAM-DEF">/ModuleDef/demo/contB/subCont/intParam</DEFINITION-REF>
-                      <VALUE>255</VALUE>
+                      <VALUE>1024</VALUE>
                     </ECUC-NUMERICAL-PARAM-VALUE>
                   </PARAMETER-VALUES>
                   <REFERENCE-VALUES>
@@ -74,6 +82,14 @@
                 </ECUC-CONTAINER-VALUE>
               </SUB-CONTAINERS>
             </ECUC-CONTAINER-VALUE>
+            <ECUC-CONTAINER-VALUE>
+              <SHORT-NAME>ContC_conf_0</SHORT-NAME>
+              <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DEFINITION-REF>
+            </ECUC-CONTAINER-VALUE>
+            <!--<ECUC-CONTAINER-VALUE>
+              <SHORT-NAME>ContC_conf_1</SHORT-NAME>
+              <DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DEFINITION-REF>
+            </ECUC-CONTAINER-VALUE>-->
           </CONTAINERS>
         </ECUC-MODULE-CONFIGURATION-VALUES>
       </ELEMENTS>

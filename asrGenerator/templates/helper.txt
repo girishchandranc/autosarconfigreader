@@ -2,7 +2,7 @@
 # Container configuration node for {{ container.get_name() }}
 class {{ container.get_name() }}(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, '{{ container.get_name() }}')
+        super().__init__(node, '{{ container.get_name() }}', '{{ container.get_path() }}')
         self.isChoiceContainer = {{ container.is_choice_container() }}
 
         {%- if container.get_sub_containers()|length > 0 %}
@@ -56,7 +56,11 @@ class {{ container.get_name() }}(AutosarNode):
         {%- if container.get_references()|length > 0 %}
         #references
             {%- for reference in container.get_references() %}
+                {%- if reference.is_multi_instance_reference() %}
+        self.{{ reference.get_name() }}_values = []
+                {%- else %}
         self.{{ reference.get_name() }}_value = None
+                {%- endif %}
             {%- endfor %}
 
         for reference in node.findall('{*}REFERENCE-VALUES/*'):
@@ -69,7 +73,11 @@ class {{ container.get_name() }}(AutosarNode):
             {%- else %}
                 elif definitionName == '{{ reference.get_name() }}':
             {%- endif %}
+            {%- if reference.is_multi_instance_reference() %}
+                    self.{{ reference.get_name() }}_values.append(self.{{ reference.get_name() }}(reference))
+            {%- else %}
                     self.{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(reference)
+            {%- endif %}
             {%- endfor %}
         {%- endif %}
 
@@ -95,8 +103,13 @@ class {{ container.get_name() }}(AutosarNode):
 
 {%- for reference in container.get_references() %}
     #Returns the reference {{ reference.get_name() }}
+    {%- if reference.is_multi_instance_reference() %}
+    def get_{{ reference.get_name() }}s(self):
+        return self.{{ reference.get_name() }}_values
+                {%- else %}
     def get_{{ reference.get_name() }}(self):
         return self.{{ reference.get_name() }}_value
+                {%- endif %}
 {% endfor -%}
 {%- endmacro %}
 
@@ -104,7 +117,7 @@ class {{ container.get_name() }}(AutosarNode):
     # Parameter configuration node for {{ parameter.get_name() }}
     class {{ parameter.get_name() }}(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, '{{ parameter.get_name() }}')
+            super().__init__(node, '{{ parameter.get_name() }}', '{{ parameter.get_path() }}')
             self.value = None
             valueNode = node.find('{*}VALUE')
             paramValue = valueNode.text if valueNode is not None else None
@@ -170,7 +183,7 @@ class {{ container.get_name() }}(AutosarNode):
     # Reference configuration node for {{ reference.get_name() }}
     class {{ reference.get_name() }}(AutosarNode):
         def __init__(self, node):
-            super().__init__(node, '{{ reference.get_name() }}')
+            super().__init__(node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
             valueNode = node.find('{*}VALUE-REF')
             self.value = valueNode.text if valueNode is not None else None
             self.type = {{ reference.get_type() }}

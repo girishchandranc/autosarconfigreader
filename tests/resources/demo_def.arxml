@@ -66,6 +66,12 @@
                                     <SHORT-NAME>ref1</SHORT-NAME>
                                     <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo_other/contA</DESTINATION-REF>
                                 </ECUC-REFERENCE-DEF>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref2</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
                                 <ECUC-FOREIGN-REFERENCE-DEF UUID="ECUC:0730bef6-369d-43c8-ac1b-71a0f3b1709f">
                                     <SHORT-NAME>foreignRef</SHORT-NAME>
                                     <DESTINATION-TYPE>SW-COMPONENT-PROTOTYPE</DESTINATION-TYPE>
@@ -73,6 +79,11 @@
                             </REFERENCES>
                         </ECUC-PARAM-CONF-CONTAINER-DEF>
                     </SUB-CONTAINERS>
+                </ECUC-PARAM-CONF-CONTAINER-DEF>
+                <ECUC-PARAM-CONF-CONTAINER-DEF>
+                    <SHORT-NAME>contC</SHORT-NAME>
+                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                    <UPPER-MULTIPLICITY>5</UPPER-MULTIPLICITY>
                 </ECUC-PARAM-CONF-CONTAINER-DEF>
             </CONTAINERS>
         </ECUC-MODULE-DEF>

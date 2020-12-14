@@ -13,6 +13,8 @@ ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREI
 
 # dict supposed to be used internally by the module to store the path and its corresponding autosar node
 pathsToNodeDict = {}
+# dict supposed to be used internally by the module to store the instances of autosar node for the definition path
+definitionPathToNodesDict = {}
 
 def read_and_build_module_configuration(file):
     """
@@ -23,6 +25,10 @@ def read_and_build_module_configuration(file):
               file do not contain the module configuration for
               {{ module.get_name() }}.
     """
+    #Clearing the cache if any before building the module
+    pathsToNodeDict.clear()
+    definitionPathToNodesDict.clear()
+
     rootAutosarNode = etree.parse(file)
     moduleConfNode = None
     #{*} is used to consider the wildcard namespace.
@@ -49,9 +55,22 @@ def get_node(path):
     else:
         return None
 
+def get_nodes_for_definition_path(path):
+    """
+    Returns the autosar nodes for the corresponding definition path.
+
+    @param path: The fully qualified autosar path starting from the module name 
+                 and avoiding the Ar-package(eg: /Module/Container1).
+    @return:  The nodes corresponding to the path or None if the node for path is not available.
+    """
+    if path in definitionPathToNodesDict:
+        return definitionPathToNodesDict[path]
+    else:
+        return None
+
 # Base class for all autosar nodes
 class AutosarNode:
-    def __init__(self, node, definitionName):
+    def __init__(self, node, definitionName, definitionPath):
         self.node = node
         self.name = None
         shortNameNode = node.find('{*}SHORT-NAME')
@@ -63,8 +82,15 @@ class AutosarNode:
         names = []
         names.append(self.name)
         self.__compute_path(node.getparent(), names)
-        self.path = self.__build_path(names)
+        self.path = self.__build_path(reversed(names))
         pathsToNodeDict[self.path] = self
+
+        if definitionPath == self.__get_definition_path_of_node(node):
+            if definitionPath not in definitionPathToNodesDict:
+                nodes = []
+                definitionPathToNodesDict[definitionPath] = nodes
+
+            definitionPathToNodesDict[definitionPath].append(self)
 
     def __compute_path(self, node, names):
         #get all path until the AUTOSAR root node
@@ -79,9 +105,24 @@ class AutosarNode:
     
     def __build_path(self, names):
         returnValue = ''
-        for name in reversed(names):
+        for name in names:
             returnValue = returnValue + '/' + name
         return returnValue
+    
+    def __get_definition_path_of_node(self, node):
+        definitionPath = None
+        definitionRef = node.find('{*}DEFINITION-REF').text
+        if definitionRef is not None:
+            defNameList = definitionRef.split('/')
+            resulantDefNames = []
+            moduleFound = False
+            for name in defNameList:
+                if name == '{{ module.get_name() }}':
+                    moduleFound = True
+                if moduleFound:
+                    resulantDefNames.append(name)
+            definitionPath = self.__build_path(resulantDefNames)
+        return definitionPath
 
     def get_short_name(self):
         return self.name
@@ -98,7 +139,7 @@ class AutosarNode:
 # Module configuration node(root node for the respective module)
 class {{ module.get_name() }}(AutosarNode):
     def __init__(self, node):
-        super().__init__(node, '{{ module.get_name() }}')
+        super().__init__(node, '{{ module.get_name() }}', '{{ module.get_path() }}')
         {% for container in module.get_containers() -%}
             {%- if container.is_multi_instance_container() %}
         self.{{ container.get_name() }}s = []

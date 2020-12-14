@@ -30,9 +30,33 @@ class AutosarNode:
     def __init__(self, node):
         self.xmlNode = node
         self.name = node.find('{*}SHORT-NAME').text
+        names = []
+        names.append(self.name)
+        self.__compute_path(node.getparent(), names)
+        self.path = self.__build_path(names)
+
+    def __compute_path(self, node, names):
+        #get all path until the ELEMENTS root node
+        if node.tag.endswith('ELEMENTS'):
+            return names
+        else:
+            shortNameNode = node.find('{*}SHORT-NAME')
+            if shortNameNode is not None:
+                names.append(shortNameNode.text)
+
+            return self.__compute_path(node.getparent(), names)
     
+    def __build_path(self, names):
+        returnValue = ''
+        for name in reversed(names):
+            returnValue = returnValue + '/' + name
+        return returnValue
+
     def get_name(self):
         return self.name
+    
+    def get_path(self):
+        return self.path
     
     def __str__(self):
         return self.name
@@ -200,6 +224,15 @@ class Reference(AutosarNode):
         self.targetRefs = []
         self.targetType = None
         self.__set_detinations(node)
+        self.isMultiInstance = False
+
+        multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
+        if multiInstanceNode is not None and (multiInstanceNode.text == '*' or int(multiInstanceNode.text) > 1):
+            self.isMultiInstance = True
+        else:
+            multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
+            if multiInstanceNode is not None and multiInstanceNode.text == 'true':
+                self.isMultiInstance = True
 
     def __set_detinations(self, node):
         if self.referenceType == ReferenceTypes.SIMPLE_REFERENCE:
@@ -219,6 +252,9 @@ class Reference(AutosarNode):
 
     def get_type(self):
         return self.referenceType
+    
+    def is_multi_instance_reference(self):
+        return self.isMultiInstance
 
     #gets the target reference for simple reference if configured in the definition file
     def get_destination(self):

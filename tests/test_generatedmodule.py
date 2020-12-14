@@ -1,125 +1,13 @@
-import unittest, os
-from asrGenerator.autosarfileprocessor import AutosarFileProcessor, FileReaderStatus, ParameterTypes, ReferenceTypes
-from test_resources.demo import demo
-from test_resources.demo_other import demo_other
+import os, sys
+import unittest
+from resources.demo import demo
+from resources.demo_other import demo_other
 
 unittest.TestLoader.sortTestMethodsUsing = None
-DEF_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'test_resources'), 'demo_def.arxml')
-DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'test_resources'), 'demo_desc.arxml')
-SECOND_DEF_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'test_resources'), 'demo_def_other.arxml')
-SECOND_DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'test_resources'), 'demo_desc_other.arxml')
+DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc.arxml')
+SECOND_DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc_other.arxml')
 
-class TestAutosarFileProcessor(unittest.TestCase):
-
-    def test_module_found(self):
-        """
-        Test that AutosarFileProcessor returns 
-        the status MODULE_FOUND if module is 
-        found in the given file
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo')
-        self.assertEqual(fileProcessor.get_status(), FileReaderStatus.MODULE_FOUND, "status should be MODULE_FOUND")
-
-    def test_module_not_found(self):
-        """
-        Test that AutosarFileProcessor returns 
-        the status MODULE_NOT_FOUND if module is 
-        not found in the given file
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo_other')
-        self.assertEqual(fileProcessor.get_status(), FileReaderStatus.MODULE_NOT_FOUND, "status should be MODULE_NOT_FOUND")
-    
-    def test_module_node(self):
-        """
-        Test that AutosarFileProcessor returns 
-        the right module node
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo')
-        module = fileProcessor.build_module()
-        self.assertTrue(module is not None, "module cannot be None")
-        self.assertEqual(module.get_name(), 'demo', "module name should be demo")
-
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo_other')
-        module = fileProcessor.build_module()
-        self.assertTrue(module is None, "module should be None")
-    
-    def test_container_node(self):
-        """
-        Test that AutosarFileProcessor builds 
-        the container node
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo')
-        module = fileProcessor.build_module()
-        self.assertEqual(len(module.get_containers()), 2, "2 containers expected")
-
-        contA = module.get_containers()[0]
-        self.assertEqual(contA.get_name(), 'contA', "first container name should be contA")
-
-        contB = module.get_containers()[1]
-        self.assertEqual(contB.get_name(), 'contB', "second container name should be contB")
-        self.assertTrue(contB.is_multi_instance_container(), "contB is a multi instance container")
-
-        subCont = contB.get_sub_containers()[0]
-        self.assertEqual(subCont.get_name(), 'subCont', "sub container name should be subCont")
-
-    def test_parameter_node(self):
-        """
-        Test that AutosarFileProcessor builds 
-        the parameter node
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo')
-        module = fileProcessor.build_module()
-        
-        contA = module.get_containers()[0]        
-        self.assertEqual(len(contA.get_parameters()), 2, "2 parameters present in contA")
-
-        boolParam = contA.get_parameters()[0]
-        self.assertEqual(boolParam.get_name(), 'boolParam', "first parameter name should be boolParam")
-        self.assertTrue(boolParam.is_default_value_set(), "default value is set for boolParam")
-        self.assertEqual(boolParam.get_default_value(), False, "default value for boolParam is False")
-
-        enumParam = contA.get_parameters()[1]
-        self.assertEqual(enumParam.get_name(), 'enumParam', "second parameter name should be enumParam")
-        self.assertTrue(enumParam.is_default_value_set(), "default value is set for enumParam")
-        self.assertEqual(enumParam.get_default_value(), '\'GREEN\'', "default value for enumParam is GREEN")
-        self.assertEqual(enumParam.get_enum_literals(), ['RED','YELLOW','GREEN'], "enum literals are [RED, YELLOW, GREEN]")
-
-        contB = module.get_containers()[1]
-        subCont = contB.get_sub_containers()[0]
-        self.assertEqual(len(subCont.get_parameters()), 1, "only 1 parameter present in subCont")
-
-        intParam = subCont.get_parameters()[0]
-        self.assertEqual(intParam.get_name(), 'intParam', "parameter name should be intParam")
-        self.assertFalse(intParam.is_default_value_set(), "default value is not set for intParam")
-        self.assertTrue(intParam.get_default_value() is None, "default value not available for intParam")
-
-        self.assertTrue(intParam.is_min_value_set(), "min value is set for intParam")
-        self.assertEqual(intParam.get_min_value(), '0', "min value for intParam is 0")
-        self.assertTrue(intParam.is_max_value_set(), "max value is set for intParam")
-        self.assertEqual(intParam.get_max_value(), '65535', "max value for intParam is 65535")
-    
-    def test_reference_node(self):
-        """
-        Test that AutosarFileProcessor builds 
-        the parameter node
-        """
-        fileProcessor = AutosarFileProcessor(DEF_FILE_LOCATION, 'demo')
-        module = fileProcessor.build_module()
-        contB = module.get_containers()[1]
-        subCont = contB.get_sub_containers()[0]
-        self.assertEqual(len(subCont.get_references()), 2, "2 references present in subCont")
-
-        ref1 = subCont.get_references()[0]
-        self.assertEqual(ref1.get_name(), 'ref1', "reference name should be ref1")
-        self.assertEqual(ref1.get_destination(), '/ModuleDef/demo_other/contA', "destinationRef for ref1 is /ModuleDef/demo/contA")
-
-        foreignRef = subCont.get_references()[1]
-        self.assertEqual(foreignRef.get_name(), 'foreignRef', "reference name should be foreignRef")
-        self.assertEqual(foreignRef.get_destination(), None, "destinationRef is not applicable for foreign reference")
-        self.assertEqual(foreignRef.get_destination_type(), 'SW-COMPONENT-PROTOTYPE', "destinationType for foreignRef is SW-COMPONENT-PROTOTYPE")
-
-
-class TestGenerateModule(unittest.TestCase):
+class TestGeneratedModule(unittest.TestCase):
     def test_module_found(self):
         """
         Test that generated demo returns 
@@ -203,6 +91,21 @@ class TestGenerateModule(unittest.TestCase):
         self.assertEqual(ref.get_destination_ref(), '/ModuleDef/demo_other/contA', "destinationref should be /ModuleDef/demo_other/contA")
         self.assertEqual(ref.get_short_name(), 'ref1', "the reference name is ref1")
 
+        refs = subCont.get_ref2s()
+        self.assertEqual(len(refs), 2, "2 values present for reference")
+        
+        ref = refs[0]
+        self.assertEqual(ref.get_value(), '/ModuleConfig/demo/ContC_conf_0', "value of ref1 is /ModuleConfig/demo/ContC_conf_0")
+        self.assertEqual(ref.get_type(), demo.ReferenceTypes.SIMPLE_REFERENCE, "type should be SIMPLE_REFERENCE")
+        self.assertEqual(ref.get_destination_ref(), '/ModuleDef/demo/contC', "destinationref should be /ModuleDef/demo/contC")
+        self.assertEqual(ref.get_short_name(), 'ref2', "the reference name is ref2")
+
+        ref1 = refs[1]
+        self.assertEqual(ref1.get_value(), '/ModuleConfig/demo/ContC_conf_1', "value of ref1 is /ModuleConfig/demo/ContC_conf_1")
+        self.assertEqual(ref1.get_type(), demo.ReferenceTypes.SIMPLE_REFERENCE, "type should be SIMPLE_REFERENCE")
+        self.assertEqual(ref1.get_destination_ref(), '/ModuleDef/demo/contC', "destinationref should be /ModuleDef/demo/contC")
+        self.assertEqual(ref1.get_short_name(), 'ref2', "the reference name is ref2")
+
         foreignRef = subCont.get_foreignRef()
         self.assertEqual(foreignRef.get_value(), '/Autosar/Components/ComponentA', "value of foreignRef is /Autosar/Components/ComponentA")
         self.assertEqual(foreignRef.get_type(), demo.ReferenceTypes.FOREIGN_REFERENCE, "type should be FOREIGN_REFERENCE")
@@ -241,6 +144,34 @@ class TestGenerateModule(unittest.TestCase):
 
         randCont = demo.get_node('/ModuleConfig/demo/randCont')
         self.assertTrue(randCont is None, "should be None")
+    
+    def test_get_nodes_for_definition_path(self):
+        """
+        Test that the get_nodes_for_definition_path returns 
+        the configuration nodes corresponding to the given path.
+        """
+        demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        contA = demo.get_nodes_for_definition_path('/demo/contA')
+        self.assertTrue(contA is not None, "cannot be None")
+        self.assertEqual(len(contA), 1, "only 1 instance of contA is available")
+        self.assertEqual(contA[0].get_short_name(), 'ContA_conf', "short name is ContA_conf")
+
+        subCont = demo.get_nodes_for_definition_path('/demo/contB/subCont')
+        self.assertTrue(subCont is not None, "cannot be None")
+        self.assertEqual(len(subCont), 2, "2 instance of subCont expected(one from ContB_conf_0 and second from ContB_conf_1)")
+        self.assertEqual(subCont[0].get_path(), '/ModuleConfig/demo/ContB_conf_0/subCont_conf', "path is /ModuleConfig/demo/ContB_conf_0/subCont_conf")
+        self.assertEqual(subCont[1].get_path(), '/ModuleConfig/demo/ContB_conf_1/subCont_conf', "path is /ModuleConfig/demo/ContB_conf_1/subCont_conf")
+
+        intParam = demo.get_nodes_for_definition_path('/demo/contB/subCont/intParam')
+        self.assertTrue(intParam is not None, "cannot be None")
+        self.assertEqual(len(intParam), 2, "2 instance of intParam expected(one from ContB_conf_0 and second from ContB_conf_1)")
+        self.assertEqual(intParam[0].get_path(), '/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam', "path is /ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam")
+        self.assertEqual(intParam[0].get_value(), 255, "value should be 255")
+        self.assertEqual(intParam[1].get_path(), '/ModuleConfig/demo/ContB_conf_1/subCont_conf/intParam', "path is /ModuleConfig/demo/ContB_conf_1/subCont_conf/intParam")
+        self.assertEqual(intParam[1].get_value(), 1024, "value should be 1024")
+
+        randCont = demo.get_nodes_for_definition_path('/demo/randCont')
+        self.assertTrue(randCont is None, "should be None")
 
     def test_reference_value(self):
         """
@@ -253,10 +184,23 @@ class TestGenerateModule(unittest.TestCase):
         
         ref = subCont.get_ref1()
         self.assertEqual(ref.get_value(), '/ModuleConfig/demo_other/ContA_conf', "value of ref1 is /ModuleConfig/demo_other/ContA_conf")
-        
         actualRefNode = demo_other.get_node(ref.get_value())
         self.assertTrue(actualRefNode is not None, "the referenced node is not None")        
         self.assertEqual(actualRefNode.get_short_name(), 'ContA_conf', "the referenced container name is ContA_conf")
+
+        ref2s = subCont.get_ref2s()
+        self.assertEqual(len(ref2s), 2, "2 values present for reference ref2")
+        
+        ref2 = ref2s[0]
+        self.assertEqual(ref2.get_value(), '/ModuleConfig/demo/ContC_conf_0', "value of ref2 is /ModuleConfig/demo/ContC_conf_0")
+        actualRefNode = demo.get_node(ref2.get_value())
+        self.assertTrue(actualRefNode is not None, "the referenced node is not None")        
+        self.assertEqual(actualRefNode.get_short_name(), 'ContC_conf_0', "the referenced container name is ContC_conf_0")
+
+        ref2 = ref2s[1]
+        self.assertEqual(ref2.get_value(), '/ModuleConfig/demo/ContC_conf_1', "value of ref2 is /ModuleConfig/demo/ContC_conf_1")
+        actualRefNode = demo.get_node(ref2.get_value())
+        self.assertTrue(actualRefNode is None, "the referenced node is None")
 
 if __name__ == '__main__':
     unittest.main()
