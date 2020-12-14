@@ -213,4 +213,4 @@ Container classes has getter methods for accessing the references, which in turn
 - DestintionRef : The destination ref available from the definition file. This is just available for simple and choice reference.
 - DestinationType : The destination type available from the definition file. This is just available for foreign reference.
 
-### Please refer the test.py to know more about accessing different types of data from the generated code.
+### Please refer the tests/test_generatedmodule.py to know more about accessing different types of data from the generated code.
