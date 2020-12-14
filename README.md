@@ -213,4 +213,42 @@ Container classes has getter methods for accessing the references, which in turn
 - DestintionRef : The destination ref available from the definition file. This is just available for simple and choice reference.
 - DestinationType : The destination type available from the definition file. This is just available for foreign reference.
 
-### Please refer the tests/test_generatedmodule.py to know more about accessing different types of data from the generated code.
+### Access nodes by path
+It is possible to access a container/parameter/reference by the fully qualified path. 
+
+```python
+demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+contB = demo.get_node('/ModuleConfig/demo/ContB_conf_0')
+self.assertTrue(contB is not None, "cannot be None")
+```
+
+There also exists another utility function to access container/parameter/reference by providing the definition path. For eg: this could be handy in situations where you need to know the description nodes for a definition node.
+
+```python
+demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+contB = demo.get_nodes_for_definition_path('/demo/contB')
+self.assertTrue(contB is not None, "cannot be None")
+self.assertEqual(len(contB), 2, "2 instance of contB are available")
+self.assertEqual(contB[0].get_short_name(), 'ContB_conf_0', "short name is ContB_conf_0")
+self.assertEqual(contB[1].get_short_name(), 'ContB_conf_1', "short name is ContB_conf_1")
+```
+> /demo/contB is the path to the definition container contB
+
+### Modify parameter/reference values
+It is possible to modify a parameter/reference values and save the changes. Changes are saved to the specified file passed to the `save()` method. If argument is not provided, the existing file is overwritten with the changes.
+
+### Access parent node
+There exists a `get_parent()` API for each nodes to access its parent node.
+
+```python
+module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+contB = demo.get_node('/ModuleConfig/demo/ContB_conf_0')
+self.assertTrue(contB is not None, "cannot be None")
+self.assertTrue(contB.get_parent() is not None, "parent cannot be None")
+self.assertEqual(contB.get_parent().get_short_name(), 'demo' , "parents short name is demo")
+self.assertEqual(contB.get_parent(), module , "the nodes should be same")
+```
+
+### Please refer the test "tests/test_generatedmodule.py" to know more about accessing different types of data from the generated module code.
+
+

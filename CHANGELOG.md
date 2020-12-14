@@ -8,6 +8,8 @@ First release of the AutosarConfigReader. Please refer README for more informati
 ### Added
 - New API to get all instances of an Autosar node by its definition path.
 - Support for references with upper multiplicity > 1
-- New API to get parent node for any nodes
+- New API to get_parent() to get the parent of any nodes
+- New API set_value() to set the value of parameter/reference nodes
+- It is now possible to save() the file once the parameter/reference values are modified
 
 ### Changed

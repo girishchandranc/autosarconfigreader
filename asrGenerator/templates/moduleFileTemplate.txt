@@ -39,7 +39,7 @@ def read_and_build_module_configuration(file):
             break
 
     if moduleConfNode is not None:
-        return {{ module.get_name() }}(moduleConfNode)
+        return {{ module.get_name() }}(file, rootAutosarNode, moduleConfNode)
     else:
         return None
 
@@ -148,15 +148,28 @@ class AutosarNode:
     def get_path(self):
         return self.__path
 
+    def _set_model_modified(self, value):
+        """ 
+        To be set when a model is modified. It calls 
+        the parent until the module node is found. 
+        Please check the module sub class for more info.
+        """
+        self.__parent._set_model_modified(value)
+
 # Module configuration node(root node for the respective module)
 class {{ module.get_name() }}(AutosarNode):
-    def __init__(self, node):
+    def __init__(self, file, rootNode, node):
         """
         Constructor for {{ module.get_name() }} node.
 
+        @param file: The input file used to create the module.
+        @param rootNode: The root node corresponding to the file.
         @param node: The xml node for which the autosar node needs to be created.
         """
         super().__init__(None, node, '{{ module.get_name() }}', '{{ module.get_path() }}')
+        self.__rootNode = rootNode
+        self.__file = file
+        self.__isModelModified = False
         {% for container in module.get_containers() -%}
             {%- if container.is_multi_instance_container() %}
         self.__{{ container.get_name() }}s = []
@@ -183,7 +196,12 @@ class {{ module.get_name() }}(AutosarNode):
                 {%- endif %}  
             {%- endfor %}
 
+    def _set_model_modified(self, value):
+        self.__isModelModified = True
     
+    def is_model_modified(self):
+        return self.__isModelModified
+
 {% for container in module.get_containers() %}
     #Returns the configuration container {{ container.get_name() }}
     {%- if container.is_multi_instance_container() %}
@@ -195,6 +213,35 @@ class {{ module.get_name() }}(AutosarNode):
     {%- endif %}  
 {% endfor %}
 
+    def save(self, file = None):
+        """
+        Saves the configuration:
+            - To the file passed as argument
+            - Overwrite the existing file if no argument is provided
+        
+        Raises an exception if save() is called without a module
+
+        @param file: The file location where the configuration needs to be saved.
+        """
+        if self.__isModelModified is False:
+            return 'The model is not changed. Ignoring the save request!'
+        elif file is not None:
+            self.__rootNode.write(file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+        else:
+            self.__rootNode.write(self.__file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+        return 'The model saved!'
+
 {% for container in module.get_containers() %}
 {{ helper.createContainer(container, ParameterTypes, ReferenceTypes) }}
 {% endfor %}
+
+# Exception classes
+class ValueNotPossibleError(Exception):
+    """Exception raised when the provided value is not possible to set for the parameter"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class FileSaveError(Exception):
+    """Exception raised when the file is unable to save"""
+    def __init__(self, message):
+        super().__init__(message)

@@ -1,6 +1,6 @@
 """
 The python file contains the different classes for accessing the containers and parameters of the 'demo_other' module.
-This file is generated for the module 'demo_other' on Mon Dec 14 15:54:49 2020.
+This file is generated for the module 'demo_other' on Mon Dec 14 22:46:56 2020.
 """
 
 from lxml import etree
@@ -38,7 +38,7 @@ def read_and_build_module_configuration(file):
             break
 
     if moduleConfNode is not None:
-        return demo_other(moduleConfNode)
+        return demo_other(file, rootAutosarNode, moduleConfNode)
     else:
         return None
 
@@ -147,15 +147,28 @@ class AutosarNode:
     def get_path(self):
         return self.__path
 
+    def _set_model_modified(self, value):
+        """ 
+        To be set when a model is modified. It calls 
+        the parent until the module node is found. 
+        Please check the module sub class for more info.
+        """
+        self.__parent._set_model_modified(value)
+
 # Module configuration node(root node for the respective module)
 class demo_other(AutosarNode):
-    def __init__(self, node):
+    def __init__(self, file, rootNode, node):
         """
         Constructor for demo_other node.
 
+        @param file: The input file used to create the module.
+        @param rootNode: The root node corresponding to the file.
         @param node: The xml node for which the autosar node needs to be created.
         """
         super().__init__(None, node, 'demo_other', '/demo_other')
+        self.__rootNode = rootNode
+        self.__file = file
+        self.__isModelModified = False
         
         self.__contA = None
         self.__contBs = []
@@ -170,7 +183,12 @@ class demo_other(AutosarNode):
                 elif definitionName == 'contB':
                     self.__contBs.append(contB(self, container))
 
+    def _set_model_modified(self, value):
+        self.__isModelModified = True
     
+    def is_model_modified(self):
+        return self.__isModelModified
+
 
     #Returns the configuration container contA
     def get_contA(self):
@@ -180,6 +198,24 @@ class demo_other(AutosarNode):
     def get_contBs(self):
         return self.__contBs  
 
+
+    def save(self, file = None):
+        """
+        Saves the configuration:
+            - To the file passed as argument
+            - Overwrite the existing file if no argument is provided
+        
+        Raises an exception if save() is called without a module
+
+        @param file: The file location where the configuration needs to be saved.
+        """
+        if self.__isModelModified is False:
+            return 'The model is not changed. Ignoring the save request!'
+        elif file is not None:
+            self.__rootNode.write(file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+        else:
+            self.__rootNode.write(self.__file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+        return 'The model saved!'
 
 
 # Container configuration node for contA
@@ -231,8 +267,8 @@ class contA(AutosarNode):
             """
             super().__init__(parent, node, 'boolParam', '/demo_other/contA/boolParam')
             self.__value = None
-            valueNode = node.find('{*}VALUE')
-            paramValue = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE')
+            paramValue = self.__valueNode.text if self.__valueNode is not None else None
             if paramValue is not None and paramValue == '1':
                 self.__value = True
             else:
@@ -245,6 +281,12 @@ class contA(AutosarNode):
         #Get the parameter value
         def get_value(self):
             return self.__value
+        
+        #set the parameter value
+        def set_value(self, value):
+            self.__value = value
+            self.__valueNode.text = '1' if value else '0'
+            self._set_model_modified(True)
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
@@ -270,8 +312,8 @@ class contA(AutosarNode):
             """
             super().__init__(parent, node, 'enumParam', '/demo_other/contA/enumParam')
             self.__value = None
-            valueNode = node.find('{*}VALUE')
-            paramValue = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE')
+            paramValue = self.__valueNode.text if self.__valueNode is not None else None
             self.__value = paramValue
             self.__type = ParameterTypes.ENUMERATION
             self.__isDefaultValueSet = True
@@ -281,6 +323,15 @@ class contA(AutosarNode):
         #Get the parameter value
         def get_value(self):
             return self.__value
+        
+        #set the parameter value
+        def set_value(self, value):
+            if value in self.__enumLiterals:
+                self.__value = value
+                self.__valueNode.text = value
+                self._set_model_modified(True)
+            else:
+                raise ValueNotPossibleError(message = 'Cannot set the value {}. Only the values {} are possible'.format(value, str(self.__enumLiterals)))
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
@@ -390,8 +441,8 @@ class subCont(AutosarNode):
             """
             super().__init__(parent, node, 'intParam', '/demo_other/contB/subCont/intParam')
             self.__value = None
-            valueNode = node.find('{*}VALUE')
-            paramValue = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE')
+            paramValue = self.__valueNode.text if self.__valueNode is not None else None
             if paramValue is not None:
                 self.__value = int(paramValue)
 
@@ -407,6 +458,15 @@ class subCont(AutosarNode):
         #Get the parameter value
         def get_value(self):
             return self.__value
+        
+        #set the parameter value
+        def set_value(self, value):
+            if value >= self.__min and value <= self.__max:
+                self.__value = value
+                self.__valueNode.text = str(value)
+                self._set_model_modified(True)
+            else:
+                raise ValueNotPossibleError(message = 'Cannot set the value {}. Only the values between {} and {} are possible'.format(str(value), str(self.__min), str(self.__max)))
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
@@ -443,15 +503,21 @@ class subCont(AutosarNode):
             @param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, 'ref1', '/demo_other/contB/subCont/ref1')
-            valueNode = node.find('{*}VALUE-REF')
-            self.__value = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE-REF')
+            self.__value = self.__valueNode.text if self.__valueNode is not None else None
             self.__type = ReferenceTypes.SIMPLE_REFERENCE
             self.__destinationRef = '/ModuleDef/demo_other/contA'
 
 
-        #Get the referenced node
+        #Get the reference value
         def get_value(self):
             return self.__value
+
+        #set the reference value
+        def set_value(self, value):
+            self.__value = value
+            self.__valueNode.text = value
+            self._set_model_modified(True)
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
@@ -474,14 +540,20 @@ class subCont(AutosarNode):
             @param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, 'foreignRef', '/demo_other/contB/subCont/foreignRef')
-            valueNode = node.find('{*}VALUE-REF')
-            self.__value = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE-REF')
+            self.__value = self.__valueNode.text if self.__valueNode is not None else None
             self.__type = ReferenceTypes.FOREIGN_REFERENCE
             self.__destinationType = 'SW-COMPONENT-PROTOTYPE'
 
-        #Get the referenced node
+        #Get the reference value
         def get_value(self):
             return self.__value
+
+        #set the reference value
+        def set_value(self, value):
+            self.__value = value
+            self.__valueNode.text = value
+            self._set_model_modified(True)
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
@@ -493,3 +565,15 @@ class subCont(AutosarNode):
             return self.__destinationType
 
 
+
+
+# Exception classes
+class ValueNotPossibleError(Exception):
+    """Exception raised when the provided value is not possible to set for the parameter"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class FileSaveError(Exception):
+    """Exception raised when the file is unable to save"""
+    def __init__(self, message):
+        super().__init__(message)

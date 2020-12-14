@@ -131,8 +131,8 @@ class {{ container.get_name() }}(AutosarNode):
             """
             super().__init__(parent, node, '{{ parameter.get_name() }}', '{{ parameter.get_path() }}')
             self.__value = None
-            valueNode = node.find('{*}VALUE')
-            paramValue = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE')
+            paramValue = self.__valueNode.text if self.__valueNode is not None else None
 {%- if parameter.get_type() == ParameterTypes.INTEGER %}
             if paramValue is not None:
                 self.__value = int(paramValue)
@@ -162,6 +162,32 @@ class {{ container.get_name() }}(AutosarNode):
         #Get the parameter value
         def get_value(self):
             return self.__value
+        
+        #set the parameter value
+        def set_value(self, value):
+        {%- if parameter.get_type() == ParameterTypes.BOOLEAN %}
+            self.__value = value
+            self.__valueNode.text = '1' if value else '0'
+            self._set_model_modified(True)
+        {%- elif parameter.get_type() == ParameterTypes.ENUMERATION %}
+            if value in self.__enumLiterals:
+                self.__value = value
+                self.__valueNode.text = value
+                self._set_model_modified(True)
+            else:
+                raise ValueNotPossibleError(message = 'Cannot set the value {}. Only the values {} are possible'.format(value, str(self.__enumLiterals)))
+        {%- elif parameter.get_type() == ParameterTypes.INTEGER or parameter.get_type() == ParameterTypes.FLOAT %}
+            if value >= self.__min and value <= self.__max:
+                self.__value = value
+                self.__valueNode.text = str(value)
+                self._set_model_modified(True)
+            else:
+                raise ValueNotPossibleError(message = 'Cannot set the value {}. Only the values between {} and {} are possible'.format(str(value), str(self.__min), str(self.__max)))
+        {%- else %}
+            self.__value = value
+            self.__valueNode.text = value
+            self._set_model_modified(True)
+        {%- endif %}
 
         #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
@@ -202,8 +228,8 @@ class {{ container.get_name() }}(AutosarNode):
             @param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
-            valueNode = node.find('{*}VALUE-REF')
-            self.__value = valueNode.text if valueNode is not None else None
+            self.__valueNode = node.find('{*}VALUE-REF')
+            self.__value = self.__valueNode.text if self.__valueNode is not None else None
             self.__type = {{ reference.get_type() }}
 {%- if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
             self.__destinationRef = '{{ reference.get_destination() }}'
@@ -213,9 +239,15 @@ class {{ container.get_name() }}(AutosarNode):
             self.__destinationType = '{{ reference.get_destination_type() }}'
 {%- endif %}
 
-        #Get the referenced node
+        #Get the reference value
         def get_value(self):
             return self.__value
+
+        #set the reference value
+        def set_value(self, value):
+            self.__value = value
+            self.__valueNode.text = value
+            self._set_model_modified(True)
 
         #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):

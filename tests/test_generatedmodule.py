@@ -1,11 +1,12 @@
 import os, sys
-import unittest
+import unittest, filecmp
 from resources.demo import demo
 from resources.demo_other import demo_other
 
 unittest.TestLoader.sortTestMethodsUsing = None
 DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc.arxml')
 SECOND_DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc_other.arxml')
+TEST_OUT_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'test_out.arxml')
 
 class TestGeneratedModule(unittest.TestCase):
     def test_module_found(self):
@@ -220,6 +221,98 @@ class TestGeneratedModule(unittest.TestCase):
         self.assertEqual(ref.get_parent().get_short_name(), 'subCont_conf' , "parents short name is subCont_conf")
         self.assertEqual(ref.get_parent().get_parent().get_parent(), module , "the nodes should be equal")
         self.assertEqual(ref.get_parent().get_parent(), module.get_contBs()[0] , "the nodes should be equal")
+
+    def test_set_value(self):
+        """
+        Test that the values are set properly for the parameters
+        and references.
+        """
+        demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
+        self.assertTrue(enumParam is not None, "cannot be None")
+        enumParam.set_value('YELLOW')
+        self.assertEqual(enumParam.get_value(), 'YELLOW' , "value should be YELLOW")
+
+        intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
+        self.assertTrue(intParam is not None, "cannot be None")
+        intParam.set_value(1234)
+        self.assertEqual(intParam.get_value(), 1234 , "value should be 1234")
+
+        ref1 = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+        self.assertTrue(ref1 is not None, "cannot be None")
+        ref1.set_value('/ModuleConfig/demo_other/ContA_conf_1234')
+        self.assertEqual(ref1.get_value(), '/ModuleConfig/demo_other/ContA_conf_1234' , "value should be /ModuleConfig/demo_other/ContA_conf_1234")
+
+        with self.assertRaises(demo.ValueNotPossibleError) as cm:
+            intParam.set_value(65537)
+            self.assertEqual('Cannot set the value 65537. Only the values between 0 and 65535 are possible', str(cm.exception))
+        
+        with self.assertRaises(demo.ValueNotPossibleError) as cm:
+            enumParam.set_value('BLUE')
+            self.assertEqual('Cannot set the value BLUE. Only the values [RED, YELLOW, GREEN] are possible', str(cm.exception))
+
+    def test_model_modified(self):
+        """
+        Test that the model is modified when a parameter/reference value is changed.
+        """
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        self.assertFalse(module.is_model_modified(), "model is not modified")
+
+        enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
+        self.assertTrue(enumParam is not None, "cannot be None")
+        enumParam.set_value('YELLOW')
+        self.assertTrue(module.is_model_modified(), "model is modified")
+
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        self.assertFalse(module.is_model_modified(), "model is not modified")
+        intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
+        intParam.set_value(1234)
+        self.assertTrue(module.is_model_modified(), "model is modified")
+
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        self.assertFalse(module.is_model_modified(), "model is not modified")
+        ref1 = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+        self.assertTrue(ref1 is not None, "cannot be None")
+        ref1.set_value('/ModuleConfig/demo_other/ContA_conf_1234')
+        self.assertTrue(module.is_model_modified(), "model is modified")
+
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        self.assertFalse(module.is_model_modified(), "model is not modified")
+        with self.assertRaises(demo.ValueNotPossibleError) as cm:
+            intParam.set_value(65537)
+            self.assertEqual('Cannot set the value 65537. Only the values between 0 and 65535 are possible', str(cm.exception))
+            self.assertFalse(module.is_model_modified(), "model is not modified")
+        
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        self.assertFalse(module.is_model_modified(), "model is not modified")
+        with self.assertRaises(demo.ValueNotPossibleError) as cm:
+            enumParam.set_value('BLUE')
+            self.assertEqual('Cannot set the value BLUE. Only the values [RED, YELLOW, GREEN] are possible', str(cm.exception))
+            self.assertFalse(module.is_model_modified(), "model is not modified")
+
+    def test_save(self):
+        """
+        Test that the model is saved to the location when requested by user.
+        """
+        module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+        enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
+        enumParam.set_value('YELLOW')
+        intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
+        intParam.set_value(1234)
+        ref1 = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+        ref1.set_value('/ModuleConfig/demo_other/ContA_conf_1234')
+        
+        module.save(TEST_OUT_LOCATION)
+        self.assertFalse(filecmp.cmp (DESC_FILE_LOCATION, TEST_OUT_LOCATION), "file should be different")
+
+        ##Read the saved file and check if the values are set properly        
+        demo.read_and_build_module_configuration(TEST_OUT_LOCATION)
+        enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
+        self.assertEqual(enumParam.get_value(), 'YELLOW' , "value should be YELLOW")
+        intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
+        self.assertEqual(intParam.get_value(), 1234 , "value should be 1234")
+        ref1 = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+        self.assertEqual(ref1.get_value(), '/ModuleConfig/demo_other/ContA_conf_1234' , "value should be /ModuleConfig/demo_other/ContA_conf_1234")
 
 if __name__ == '__main__':
     unittest.main()
