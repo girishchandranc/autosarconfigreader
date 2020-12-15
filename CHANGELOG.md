@@ -12,4 +12,7 @@ First release of the AutosarConfigReader. Please refer README for more informati
 - New API set_value() to set the value of parameter/reference nodes
 - It is now possible to save() the file once the parameter/reference values are modified
 
+## [0.1.5]() - 2020-12-15
 ### Changed
+- Unique classes are generated if there exists containers with duplicate names
+- Module name option is now case-insenstive. Tool accepts both `-m com` or `-m Com`

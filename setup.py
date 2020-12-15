@@ -11,9 +11,10 @@ with open('LICENSE') as f:
 
 setup(
     name='AutosarConfigReader',
-    version='0.1.4',
+    version='0.1.5',
     description='Python module for reading autosar module configuration arxml files',
     long_description=readme,
+    long_description_content_type="text/markdown",
     author='Girish Chandran',
     author_email='girishchandran.tpm@gmail.com',
     url='https://github.com/girishchandranc/autosarconfigreader',

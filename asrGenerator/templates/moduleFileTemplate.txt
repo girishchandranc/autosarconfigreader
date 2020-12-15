@@ -190,9 +190,9 @@ class {{ module.get_name() }}(AutosarNode):
                 elif definitionName == '{{ container.get_name() }}':
                 {%- endif %}
                 {%- if container.is_multi_instance_container() %}
-                    self.__{{ container.get_name() }}s.append({{ container.get_name() }}(self, container))
+                    self.__{{ container.get_name() }}s.append({{ container.get_class_name() }}(self, container))
                 {%- else %}
-                    self.__{{ container.get_name() }} = {{ container.get_name() }}(self, container)
+                    self.__{{ container.get_name() }} = {{ container.get_class_name() }}(self, container)
                 {%- endif %}  
             {%- endfor %}
 
@@ -238,10 +238,5 @@ class {{ module.get_name() }}(AutosarNode):
 # Exception classes
 class ValueNotPossibleError(Exception):
     """Exception raised when the provided value is not possible to set for the parameter"""
-    def __init__(self, message):
-        super().__init__(message)
-
-class FileSaveError(Exception):
-    """Exception raised when the file is unable to save"""
     def __init__(self, message):
         super().__init__(message)

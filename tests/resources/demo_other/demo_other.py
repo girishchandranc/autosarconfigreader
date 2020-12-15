@@ -1,6 +1,6 @@
 """
 The python file contains the different classes for accessing the containers and parameters of the 'demo_other' module.
-This file is generated for the module 'demo_other' on Mon Dec 14 22:46:56 2020.
+This file is generated for the module 'demo_other' on Tue Dec 15 14:46:13 2020.
 """
 
 from lxml import etree
@@ -570,10 +570,5 @@ class subCont(AutosarNode):
 # Exception classes
 class ValueNotPossibleError(Exception):
     """Exception raised when the provided value is not possible to set for the parameter"""
-    def __init__(self, message):
-        super().__init__(message)
-
-class FileSaveError(Exception):
-    """Exception raised when the file is unable to save"""
     def __init__(self, message):
         super().__init__(message)

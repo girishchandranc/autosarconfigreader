@@ -11,10 +11,11 @@ class AutosarFileProcessor:
         rootAutosarNode = etree.parse(file)
         self.__status = FileReaderStatus.MODULE_NOT_FOUND
         self.__moduleNodeForGeneration= None
+        AutosarNode.clear() # clears any cache it exists
 
         #{*} is used to consider the wildcard namespace.
         for moduleDefNode in rootAutosarNode.findall('//{*}ECUC-MODULE-DEF/{*}SHORT-NAME'):
-            if moduleDefNode.text == module:
+            if moduleDefNode.text.lower() == module.lower():
                 self.__moduleNodeForGeneration= moduleDefNode.getparent()
                 self.__status = FileReaderStatus.MODULE_FOUND
                 break
@@ -27,6 +28,8 @@ class AutosarFileProcessor:
 
 #Representation of any autosar node
 class AutosarNode:
+    __classNames = [] #static list with names of all class names of containers/parameters/references.Kept to avoid duplicate naming
+
     def __init__(self, node):
         self.__xmlNode = node
         self.__name = node.find('{*}SHORT-NAME').text
@@ -34,6 +37,7 @@ class AutosarNode:
         names.append(self.__name)
         self.__compute_path(node.getparent(), names)
         self.__path = self.__build_path(names)
+        self.__className = self.__name if isinstance(self, (Module, Parameter, Reference)) else AutosarNode.__identify_class_name(self.__name)
 
     def __compute_path(self, node, names):
         #get all path until the ELEMENTS root node
@@ -51,13 +55,30 @@ class AutosarNode:
         for name in reversed(names):
             returnValue = returnValue + '/' + name
         return returnValue
-
+    
     def get_name(self):
         return self.__name
     
     def get_path(self):
         return self.__path
+
+    def get_class_name(self):
+        return self.__className
     
+    @staticmethod
+    def __identify_class_name(name,count=None):
+        if name not in AutosarNode.__classNames:
+            AutosarNode.__classNames.append(name)
+            return name
+        else:
+            count = 1 if count is None else (count + 1)
+            name = (name + str(count)) if count == 1 else (name[:-1] + str(count)) 
+            return AutosarNode.__identify_class_name(name, count)
+    
+    @staticmethod
+    def clear():
+        AutosarNode.__classNames.clear()
+
     def __str__(self):
         return self.__name
 
@@ -182,7 +203,7 @@ class Parameter(AutosarNode):
             valueNode = node.find('{*}' + ('MIN' if isMinValue else 'MAX'))
             if valueNode is not None:
                 if isMinValue:
-                    self.__minValue = valueNode.text
+                    self.__minValue = (-sys.maxsize - 1) if valueNode.text.lower() == '-inf' else valueNode.text
                     self.__isMinValueSet = True
                 else:
                     self.__maxValue = sys.maxsize if valueNode.text.lower() == 'inf' else valueNode.text

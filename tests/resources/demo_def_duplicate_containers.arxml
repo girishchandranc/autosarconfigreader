@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00049.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="ECUC:ModuleDef">
+      <SHORT-NAME>ModuleDef</SHORT-NAME>
+      <ELEMENTS>
+        <ECUC-MODULE-DEF>
+            <SHORT-NAME>demo</SHORT-NAME>
+            <DESC>
+                <L-2 L="EN">Configuration of the demo module.</L-2>
+            </DESC>
+            <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+            <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+            <POST-BUILD-VARIANT-SUPPORT>true</POST-BUILD-VARIANT-SUPPORT>
+            <SUPPORTED-CONFIG-VARIANTS>
+                <SUPPORTED-CONFIG-VARIANT>VARIANT-POST-BUILD</SUPPORTED-CONFIG-VARIANT>
+                <SUPPORTED-CONFIG-VARIANT>VARIANT-PRE-COMPILE</SUPPORTED-CONFIG-VARIANT>
+            </SUPPORTED-CONFIG-VARIANTS>
+            <CONTAINERS>
+                <ECUC-PARAM-CONF-CONTAINER-DEF>
+                    <SHORT-NAME>contA</SHORT-NAME>
+                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                    <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                    <PARAMETERS>
+                        <ECUC-BOOLEAN-PARAM-DEF>
+                            <SHORT-NAME>boolParam</SHORT-NAME>
+                            <DEFAULT-VALUE>false</DEFAULT-VALUE>
+                        </ECUC-BOOLEAN-PARAM-DEF>
+                        <ECUC-ENUMERATION-PARAM-DEF>
+                            <SHORT-NAME>enumParam</SHORT-NAME>
+                            <DEFAULT-VALUE>GREEN</DEFAULT-VALUE>
+                            <LITERALS>
+                                <ECUC-ENUMERATION-LITERAL-DEF>
+                                    <SHORT-NAME>RED</SHORT-NAME>
+                                </ECUC-ENUMERATION-LITERAL-DEF>
+                                <ECUC-ENUMERATION-LITERAL-DEF>
+                                    <SHORT-NAME>YELLOW</SHORT-NAME>
+                                </ECUC-ENUMERATION-LITERAL-DEF>
+                                <ECUC-ENUMERATION-LITERAL-DEF>
+                                    <SHORT-NAME>GREEN</SHORT-NAME>
+                                </ECUC-ENUMERATION-LITERAL-DEF>
+                            </LITERALS>
+                        </ECUC-ENUMERATION-PARAM-DEF>
+                    </PARAMETERS>
+                    <SUB-CONTAINERS>
+                        <ECUC-PARAM-CONF-CONTAINER-DEF>
+                            <SHORT-NAME>subCont</SHORT-NAME>
+                            <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                            <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                            <PARAMETERS>
+                                <ECUC-INTEGER-PARAM-DEF>
+                                    <SHORT-NAME>intParam</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                                    <MAX>65535</MAX>
+                                    <MIN>0</MIN>
+                                </ECUC-INTEGER-PARAM-DEF>
+                            </PARAMETERS>
+                            <REFERENCES>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref1</SHORT-NAME>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo_other/contA</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref2</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-FOREIGN-REFERENCE-DEF UUID="ECUC:0730bef6-369d-43c8-ac1b-71a0f3b1709f">
+                                    <SHORT-NAME>foreignRef</SHORT-NAME>
+                                    <DESTINATION-TYPE>SW-COMPONENT-PROTOTYPE</DESTINATION-TYPE>
+                                </ECUC-FOREIGN-REFERENCE-DEF>
+                            </REFERENCES>
+                        </ECUC-PARAM-CONF-CONTAINER-DEF>
+                    </SUB-CONTAINERS>
+                </ECUC-PARAM-CONF-CONTAINER-DEF>
+                <ECUC-PARAM-CONF-CONTAINER-DEF>
+                    <SHORT-NAME>contB</SHORT-NAME>
+                    <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                    <SUB-CONTAINERS>
+                        <ECUC-PARAM-CONF-CONTAINER-DEF>
+                            <SHORT-NAME>subCont</SHORT-NAME>
+                            <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                            <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                            <PARAMETERS>
+                                <ECUC-INTEGER-PARAM-DEF>
+                                    <SHORT-NAME>intParam</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                                    <MAX>65535</MAX>
+                                    <MIN>0</MIN>
+                                </ECUC-INTEGER-PARAM-DEF>
+                            </PARAMETERS>
+                            <REFERENCES>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref1</SHORT-NAME>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo_other/contA</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref2</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-FOREIGN-REFERENCE-DEF UUID="ECUC:0730bef6-369d-43c8-ac1b-71a0f3b1709f">
+                                    <SHORT-NAME>foreignRef</SHORT-NAME>
+                                    <DESTINATION-TYPE>SW-COMPONENT-PROTOTYPE</DESTINATION-TYPE>
+                                </ECUC-FOREIGN-REFERENCE-DEF>
+                            </REFERENCES>
+                        </ECUC-PARAM-CONF-CONTAINER-DEF>
+                    </SUB-CONTAINERS>
+                </ECUC-PARAM-CONF-CONTAINER-DEF>
+                <ECUC-PARAM-CONF-CONTAINER-DEF>
+                    <SHORT-NAME>contC</SHORT-NAME>
+                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                    <UPPER-MULTIPLICITY>5</UPPER-MULTIPLICITY>
+                    <SUB-CONTAINERS>
+                        <ECUC-PARAM-CONF-CONTAINER-DEF>
+                            <SHORT-NAME>subCont</SHORT-NAME>
+                            <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                            <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                            <PARAMETERS>
+                                <ECUC-INTEGER-PARAM-DEF>
+                                    <SHORT-NAME>intParam</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                                    <MAX>65535</MAX>
+                                    <MIN>0</MIN>
+                                </ECUC-INTEGER-PARAM-DEF>
+                            </PARAMETERS>
+                            <REFERENCES>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref1</SHORT-NAME>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo_other/contA</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-REFERENCE-DEF>
+                                    <SHORT-NAME>ref2</SHORT-NAME>
+                                    <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                                    <DESTINATION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF">/ModuleDef/demo/contC</DESTINATION-REF>
+                                </ECUC-REFERENCE-DEF>
+                                <ECUC-FOREIGN-REFERENCE-DEF UUID="ECUC:0730bef6-369d-43c8-ac1b-71a0f3b1709f">
+                                    <SHORT-NAME>foreignRef</SHORT-NAME>
+                                    <DESTINATION-TYPE>SW-COMPONENT-PROTOTYPE</DESTINATION-TYPE>
+                                </ECUC-FOREIGN-REFERENCE-DEF>
+                            </REFERENCES>
+                        </ECUC-PARAM-CONF-CONTAINER-DEF>
+                    </SUB-CONTAINERS>
+                </ECUC-PARAM-CONF-CONTAINER-DEF>
+            </CONTAINERS>
+        </ECUC-MODULE-DEF>
+      </ELEMENTS>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

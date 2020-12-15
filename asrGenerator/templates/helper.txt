@@ -1,6 +1,6 @@
 {%- macro createContainerClass(container) -%}
 # Container configuration node for {{ container.get_name() }}
-class {{ container.get_name() }}(AutosarNode):
+class {{ container.get_class_name() }}(AutosarNode):
     def __init__(self, parent, node):
         """
         Constructor for {{ container.get_name() }} node.
@@ -32,9 +32,9 @@ class {{ container.get_name() }}(AutosarNode):
                 elif definitionName == '{{ subContainer.get_name() }}':
                 {%- endif %}
                 {%- if subContainer.is_multi_instance_container() %}
-                    self.__{{ subContainer.get_name() }}s.append({{ subContainer.get_name() }}(self, subContainer))
+                    self.__{{ subContainer.get_name() }}s.append({{ subContainer.get_class_name() }}(self, subContainer))
                 {%- else %}
-                    self.__{{ subContainer.get_name() }} = {{ subContainer.get_name() }}(self, subContainer)
+                    self.__{{ subContainer.get_name() }} = {{ subContainer.get_class_name() }}(self, subContainer)
                 {%- endif %}  
             {%- endfor %}
         {%- endif %}
@@ -55,7 +55,7 @@ class {{ container.get_name() }}(AutosarNode):
             {%- else %}
                 elif definitionName == '{{ parameter.get_name() }}':
             {%- endif %}
-                    self.__{{ parameter.get_name() }}_value = self.{{ parameter.get_name() }}(self, parameter)
+                    self.__{{ parameter.get_name() }}_value = self.{{ parameter.get_class_name() }}(self, parameter)
             {%- endfor %}
         {%- endif %}
 
@@ -80,9 +80,9 @@ class {{ container.get_name() }}(AutosarNode):
                 elif definitionName == '{{ reference.get_name() }}':
             {%- endif %}
             {%- if reference.is_multi_instance_reference() %}
-                    self.__{{ reference.get_name() }}_values.append(self.{{ reference.get_name() }}(self, reference))
+                    self.__{{ reference.get_name() }}_values.append(self.{{ reference.get_class_name() }}(self, reference))
             {%- else %}
-                    self.__{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(self, reference)
+                    self.__{{ reference.get_name() }}_value = self.{{ reference.get_class_name() }}(self, reference)
             {%- endif %}
             {%- endfor %}
         {%- endif %}
@@ -121,7 +121,7 @@ class {{ container.get_name() }}(AutosarNode):
 
 {%- macro createParameterClass(parameter, ParameterTypes) %}
     # Parameter configuration node for {{ parameter.get_name() }}
-    class {{ parameter.get_name() }}(AutosarNode):
+    class {{ parameter.get_class_name() }}(AutosarNode):
         def __init__(self, parent, node):
             """
             Constructor for {{ parameter.get_name() }} node.
@@ -219,7 +219,7 @@ class {{ container.get_name() }}(AutosarNode):
 
 {%- macro createReferenceClass(reference, ReferenceTypes) %}
     # Reference configuration node for {{ reference.get_name() }}
-    class {{ reference.get_name() }}(AutosarNode):
+    class {{ reference.get_class_name() }}(AutosarNode):
         def __init__(self, parent, node):
             """
             Constructor for {{ reference.get_name() }} node.

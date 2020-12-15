@@ -7,6 +7,7 @@ from asrGenerator.autosarfileprocessor import AutosarFileProcessor, FileReaderSt
 
 unittest.TestLoader.sortTestMethodsUsing = None
 DEF_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_def.arxml')
+DEF_FILE_DUPLICATE_CONTAINERS_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_def_duplicate_containers.arxml')
 
 class TestAutosarFileProcessor(unittest.TestCase):
 
@@ -146,6 +147,31 @@ class TestAutosarFileProcessor(unittest.TestCase):
 
         boolParam = contA.get_parameters()[0]
         self.assertEqual(boolParam.get_path(), '/demo/contA/boolParam', "path /demo/contA/boolParam expected")
+    
+    def test_duplicate_container_names(self):
+        """
+        Test that AutosarFileProcessor creates unique classes
+        if there exists multiple containers with same name
+        """
+        fileProcessor = AutosarFileProcessor(DEF_FILE_DUPLICATE_CONTAINERS_LOCATION, 'demo')
+        module = fileProcessor.build_module()
+        
+        contA = module.get_containers()[0]
+        contB = module.get_containers()[1]
+        contC = module.get_containers()[2]
+        subContA = contA.get_sub_containers()[0]
+        subContB = contB.get_sub_containers()[0]
+        subContC = contC.get_sub_containers()[0]
+
+        self.assertEqual(subContA.get_name(), 'subCont', "subcontainer name should be subCont")
+        self.assertEqual(subContB.get_name(), 'subCont', "subcontainer name should be subCont")
+        self.assertEqual(subContC.get_name(), 'subCont', "subcontainer name should be subCont")
+        self.assertEqual(subContA.get_path(), '/demo/contA/subCont', "path /demo/contA/subCont")
+        self.assertEqual(subContB.get_path(), '/demo/contB/subCont', "path /demo/contB/subCont")
+        self.assertEqual(subContC.get_path(), '/demo/contC/subCont', "path /demo/contC/subCont")
+        self.assertEqual(subContA.get_class_name(), 'subCont', "class name should be subCont")
+        self.assertEqual(subContB.get_class_name(), 'subCont1', "class name should be subCont1")
+        self.assertEqual(subContC.get_class_name(), 'subCont2', "class name should be subCont2")
 
 if __name__ == '__main__':
     unittest.main()
