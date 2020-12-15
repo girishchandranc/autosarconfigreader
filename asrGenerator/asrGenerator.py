@@ -4,7 +4,6 @@ import logging, os, time
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
-__version = '0.1.4'
 __inputFile =''
 __outputFolder =''
 
