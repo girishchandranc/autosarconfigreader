@@ -237,6 +237,17 @@ self.assertEqual(contB[1].get_short_name(), 'ContB_conf_1', "short name is ContB
 ### Modify parameter/reference values
 It is possible to modify a parameter/reference values and save the changes. Changes are saved to the specified file passed to the `save()` method. If argument is not provided, the existing file is overwritten with the changes.
 
+```python
+module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
+enumParam.set_value('YELLOW')
+intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
+intParam.set_value(1234)
+ref1 = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/ref1')
+ref1.set_value('/ModuleConfig/demo_other/ContA_conf_1234')
+module.save(TEST_OUT_LOCATION)
+```
+
 ### Access parent node
 There exists a `get_parent()` API for each nodes to access its parent node.
 
