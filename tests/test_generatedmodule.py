@@ -1,7 +1,7 @@
 import os, sys
 import pytest, filecmp
-from resources.demo import demo
-from resources.demo_other import demo_other
+from .resources.demo import demo
+from .resources.demo_other import demo_other
 
 DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc.arxml')
 SECOND_DESC_FILE_LOCATION = os.path.join(os.path.join(os.path.dirname(__file__), 'resources'), 'demo_desc_other.arxml')
