@@ -1,4 +1,4 @@
-[![Build Actions Status](https://github.com/girishchandranc/autosarconfigreader/workflows/app-testing/badge.svg)](https://github.com/girishchandranc/autosarconfigreader/actions)
+[![Build Actions Status](https://github.com/girishchandranc/autosarconfigreader/workflows/Build/badge.svg)](https://github.com/girishchandranc/autosarconfigreader/actions)
 # Autosar Config Reader
 
 The asrGenerator package provides the option to read Autosar compliant ecu configuration files by:
