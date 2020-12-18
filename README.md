@@ -13,7 +13,7 @@ To generate the code for module, first install the package AutosarConfigReader a
 pip install -i https://test.pypi.org/simple/ AutosarConfigReader
 python3 -m asrGenerator -i <input_file> -m <module_name> -o <output_folder>
 ```
-- <input_file>: Provide the fully qualified path to the autosar definition file.
+- <input_file>: Provide the path to the autosar definition file.
 - <module_name>: Provide the module name for which the code needs to be generated.For eg: Rte
 - <output_folder>: Provide the location where the code needs to be generated.
 
@@ -236,7 +236,7 @@ self.assertEqual(contB[1].get_short_name(), 'ContB_conf_1', "short name is ContB
 > /demo/contB is the path to the definition container contB
 
 ### Modify parameter/reference values
-It is possible to modify a parameter/reference values and save the changes. Changes are saved to the specified file passed to the `save()` method. If argument is not provided, the existing file is overwritten with the changes.
+It is possible to modify a parameter/reference values and save the changes. Changes are saved to the specified file passed to the `save()` method. If file name is not provided, the existing file is overwritten with the changes.
 
 ```python
 module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
