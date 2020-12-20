@@ -5,7 +5,9 @@ The asrGenerator package provides the option to read Autosar compliant ecu confi
 - Generating python classes based on the autosar module definition file
     - Generate a python package and classes corresponding to the module/containers/parameters/references with exactly the same name as in the definition file.
     - Using the generated classes, users could simply access the complete configuration through a list of getter methods.
-    - The package will be handy in writing code generators for the autosar modules where users would be benefitted from accessing the containers/parameter values as python classes instead of reading the autosar module configuration file
+    - The package will be handy:
+        - In writing code generators for the autosar modules where user would be benefitted from accessing the containers/parameter values as python objects instead of manually reading the autosar module configuration file.
+        - In an automated test environment, where user could simply modify the value of parameters without the need of using any professional tooling and save the changes to a file and use it for the next steps.
 
 ## Usage instructions
 To generate the code for module, first install the package AutosarConfigReader and then call the module `asrGenerator` by providing the relevant arguments.
