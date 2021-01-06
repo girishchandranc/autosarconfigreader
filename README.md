@@ -9,12 +9,18 @@ The asrGenerator package provides the option to read Autosar compliant ecu confi
         - In writing code generators for the autosar modules where user would be benefitted from accessing the containers/parameter values as python objects instead of manually reading the autosar module configuration file.
         - In an automated test environment, where user could simply modify the value of parameters without the need of using any professional tooling and save the changes to a file and use it for the next steps.
 
-## Usage instructions
-To generate the code for module, first install the package AutosarConfigReader and then call the module `asrGenerator` by providing the relevant arguments.
+## How to use
+- Clone the repository.
+- Manually install the package.
+    
+    $ python setup.py install
+> use `python3` if you have both `python2` and `python3` installed.
+
+- Generate the code for your desired autosar module, by caling the python module `asrGenerator` with relevant arguments.
 ```python
-pip install -i https://test.pypi.org/simple/ AutosarConfigReader
-python3 -m asrGenerator -i <input_file> -m <module_name> -o <output_folder>
+python -m asrGenerator -i <input_file> -m <module_name> -o <output_folder>
 ```
+> use `python3` if you have both `python2` and `python3` installed.
 - <input_file>: Provide the path to the autosar definition file.
 - <module_name>: Provide the module name for which the code needs to be generated.For eg: Rte
 - <output_folder>: Provide the location where the code needs to be generated.
