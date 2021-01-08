@@ -1,37 +1,57 @@
 {% import 'helper.txt' as helper -%}
 """
-The python file contains the different classes for accessing the containers and parameters of the '{{ module.get_name() }}' module.
+The python file contains the different classes for accessing/creating the 
+containers and parameters of the '{{ module.get_name() }}' module.
 This file is generated for the module '{{ module.get_name() }}' on {{ time }}.
 """
 
 from lxml import etree
 from enum import Enum
+import os
 
 # Enums for possible parameter and reference types
 ParameterTypes = Enum('ParameterTypes', 'INTEGER FLOAT BOOLEAN STRING FUNCTION ENUMERATION')
 ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREIGN_REFERENCE')
 
 # dict supposed to be used internally by the module to store the path and its corresponding autosar node
-pathsToNodeDict = {}
+__pathsToNodeDict__ = {}
 # dict supposed to be used internally by the module to store the instances of autosar node for the definition path
-definitionPathToNodesDict = {}
+__definitionPathToNodesDict__ = {}
 
-def read_and_build_module_configuration(file):
+# {{ module.get_name() }} node
+__{{ module.get_name() }}Node__ = None
+
+
+# namespace for autosar arxml files
+__autosarNsMap__ = {None: "http://autosar.org/schema/r4.0", 'xsi': "http://www.w3.org/2001/XMLSchema-instance"}
+__rootSchemaAttr__ = {'{http://www.w3.org/2001/XMLSchema-instance}schemaLocation': 'http://autosar.org/schema/r4.0 AUTOSAR_00049.xsd'}
+
+
+def read(file, ignore_previous_loaded_node=False):
     """
     Reads the module configuration and build the {{ module.get_name() }} structure.
 
-    @param file: The configuration arxml file.
-    @return:  The built {{ module.get_name() }} structure. May return None if the given 
-              file do not contain the module configuration for
-              {{ module.get_name() }}.
+    :param file: The configuration arxml file.
+    :param ignore_previous_loaded_node: Set True to ignore the previously loaded {{ module.get_name() }} 
+                                        via 'read'/'new' method.
+    :return:  The built {{ module.get_name() }} structure. May return None if the given 
+              file do not contain the module configuration for {{ module.get_name() }}.
+    
+    :raise: ModuleAlreadyLoaded, if the module is already loaded and the argument 
+                                 'ignore_previous_loaded_node' is False
+    :raise: ModuleNotFoundError, if the module is not found in the input 'file'
     """
-    #Clearing the cache if any before building the module
-    pathsToNodeDict.clear()
-    definitionPathToNodesDict.clear()
+    global __{{ module.get_name() }}Node__
+    # Clearing the cache if any before building the module
+    __pathsToNodeDict__.clear()
+    __definitionPathToNodesDict__.clear()
 
-    rootAutosarNode = etree.parse(file)
+    if __{{ module.get_name() }}Node__ is not None and ignore_previous_loaded_node is False:
+        raise ModuleAlreadyLoaded('The module {{ module.get_name() }} is already loaded. To ignore the previously loaded module, please set True for argument ignore_previous_loaded_node.')
+
+    rootAutosarNode = etree.parse(file, etree.XMLParser(remove_blank_text=True))
     moduleConfNode = None
-    #{*} is used to consider the wildcard namespace.
+    # {*} is used to consider the wildcard namespace.
     for module in rootAutosarNode.findall('//{*}ECUC-MODULE-CONFIGURATION-VALUES'):
         definitionRef = module.find('{*}DEFINITION-REF').text
         if definitionRef is not None and definitionRef.split('/').pop() == '{{ module.get_name() }}':
@@ -39,34 +59,110 @@ def read_and_build_module_configuration(file):
             break
 
     if moduleConfNode is not None:
-        return {{ module.get_name() }}(file, rootAutosarNode, moduleConfNode)
+        __{{ module.get_name() }}Node__ = {{ module.get_name() }}(file, rootAutosarNode, moduleConfNode)
     else:
-        return None
+        raise ModuleNotFoundError('The module {{ module.get_name() }} not found in the input file {}.'.format(file))
+
+    return __{{ module.get_name() }}Node__
+
+
+def new(path, ignore_previous_loaded_node=False, over_write=False, add_mandatory_containers=False):
+    """
+    Creates a new file and return the {{ module.get_name() }}..
+
+    :param path: The absolute path where the file needs to be created.
+    :param ignore_previous_loaded_node: Set True to ignore the previously loaded {{ module.get_name() }} 
+                                        via 'read'/'new' method.
+    :param over_write: Pass True if the new file should overwrite if
+                      a file is already present in the given path.
+    :param add_mandatory_containers: Pass True if the the mandatory containers for the 
+                                     module should be created(please note that this 
+                                     depends on the attribute "LOWER-MULTIPLICITY" of 
+                                     the respective containers from the definition file. 
+                                     This option has no relevance if there are no container
+                                     with "LOWER-MULTIPLICITY" greater than 0).
+
+    :return: The built {{ module.get_name() }} structure.
+
+    :raise: ModuleAlreadyLoaded, if the module is already loaded and the argument 
+                                 'ignore_previous_loaded_node' is False
+    :raise: FileExistsError, file already exist when the argument overWrite is 
+                              not provided or is False
+    """
+    global __{{ module.get_name() }}Node__
+    if __{{ module.get_name() }}Node__ is not None and ignore_previous_loaded_node is False:
+        raise ModuleAlreadyLoaded('The module {{ module.get_name() }} is already loaded. To ignore the previously loaded module, please set True for argument ignore_previous_loaded_node.')
+
+    if os.path.isfile(path) and over_write is False:
+        raise FileExistsError('File {} already exists. If it needs overwriting, then please set True for argument over_write.'.format(path))
+
+    # Create file
+    root = etree.Element('AUTOSAR', nsmap=__autosarNsMap__, attrib=__rootSchemaAttr__)
+    arpackages = etree.SubElement(root, 'AR-PACKAGES')
+
+    arpackage = AutosarNode._create_node('AR-PACKAGE', short_name='{{ module.get_name() }}')
+    arpackages.append(arpackage)
+    
+    elements = etree.SubElement(arpackage, 'ELEMENTS')
+    moduleConf = AutosarNode._create_node('ECUC-MODULE-CONFIGURATION-VALUES', short_name='{{ module.get_name() }}', dest='ECUC-MODULE-DEF', definition_ref='{{ module.full_path_until_root }}')
+    elements.append(moduleConf)
+    et = etree.ElementTree(root)
+
+    # Now create the {{ module.get_name() }} object
+    __{{ module.get_name() }}Node__ = {{ module.get_name() }}(path, et, moduleConf)
+    {%- if module.any_mandatory_containers() %}
+    # Adding mandatory containers
+    if add_mandatory_containers:
+    {%- for container in module.get_containers() %}
+    {%- if not container.is_optional %}
+        __{{ module.get_name() }}Node__.new_{{ container.get_name() }}('{{ container.get_name() }}_0', add_mandatory_containers)
+    {%- endif -%}
+    {%- endfor %}
+    {%- endif %}
+
+    et.write(path, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+
+    return __{{ module.get_name() }}Node__
+
 
 def get_node(path):
     """
     Returns the autosar node for the corresponding path.
 
-    @param path: The fully qualified autosar path for eg: /Autosar/Module/Container1.
-    @return:  The node corresponding to the path or None if the node for path is not available.
+    :param path: The fully qualified autosar path for eg: /Autosar/Module/Container1.
+    :return:  The node corresponding to the path or None if the node for path is not available.
     """
-    if path in pathsToNodeDict:
-        return pathsToNodeDict[path]
+    if path in __pathsToNodeDict__:
+        return __pathsToNodeDict__[path]
     else:
         return None
+
 
 def get_nodes_for_definition_path(path):
     """
     Returns the autosar nodes for the corresponding definition path.
 
-    @param path: The fully qualified autosar path starting from the module name 
+    :param path: The fully qualified autosar path starting from the module name 
                  and avoiding the Ar-package(eg: /Module/Container1).
-    @return:  The nodes corresponding to the path or None if the node for path is not available.
+    :return:  The nodes corresponding to the path or None if the node for path is not available.
     """
-    if path in definitionPathToNodesDict:
-        return definitionPathToNodesDict[path]
+    if path in __definitionPathToNodesDict__:
+        return __definitionPathToNodesDict__[path]
     else:
         return None
+
+
+def reinit():
+    """
+    Re-initialize the package. All the loaded model entities(from input
+    /newly created files, modified/new model objects) will be removed.
+    """
+    global __{{ module.get_name() }}Node__
+    __{{ module.get_name() }}Node__ = None # Reinit the module.
+    __pathsToNodeDict__.clear() # Clearing the cache
+    __definitionPathToNodesDict__.clear()
+
+
 
 # Base class for all autosar nodes
 class AutosarNode:
@@ -74,50 +170,41 @@ class AutosarNode:
         """
         Constructor for any Autosar node.
 
-        @param parent: The parent node under which the autosar node needs to be created.
-        @param node: The xml node for which the autosar node needs to be created.
-        @param definitionName: The definition short name of the node.
-        @param definitionPath: The fully qualified path of the definition node.
+        :param parent: The parent node under which the autosar node needs to be created.
+        :param node: The xml node for which the autosar node needs to be created.
+        :param definitionName: The definition short name of the node.
+        :param definitionPath: The fully qualified path of the definition node.
         """
-        self.__parent = parent
-        self.__node = node
-        self.__name = None
+        self._parent = parent
+        self._node = node
+        self.name = None
         shortNameNode = node.find('{*}SHORT-NAME')
         if shortNameNode is not None:
-            self.__name = shortNameNode.text
+            self.name = shortNameNode.text
         else:
-            self.__name = definitionName
-        self.__definitionName = definitionName
-        names = []
-        names.append(self.__name)
-        self.__compute_path(node.getparent(), names)
-        self.__path = self.__build_path(reversed(names))
-        pathsToNodeDict[self.__path] = self
+            self.name = definitionName
+
+        self.definitionName = definitionName
+        self.definitionPath = definitionPath
+
+        self.path = ''
+        if parent is not None:
+            self.path = parent.path + '/' + self.name
+        else:
+            names = []
+            names.append(self.name)
+            self.__compute_path(node.getparent(), names)
+            self.path = self.__build_path(reversed(names))
+        __pathsToNodeDict__[self.path] = self
 
         if definitionPath == self.__get_definition_path_of_node(node):
-            if definitionPath not in definitionPathToNodesDict:
+            if definitionPath not in __definitionPathToNodesDict__:
                 nodes = []
-                definitionPathToNodesDict[definitionPath] = nodes
+                __definitionPathToNodesDict__[definitionPath] = nodes
 
-            definitionPathToNodesDict[definitionPath].append(self)
+            __definitionPathToNodesDict__[definitionPath].append(self)
 
-    def __compute_path(self, node, names):
-        #get all path until the AUTOSAR root node
-        if node.tag.endswith('AUTOSAR'):
-            return names
-        else:
-            shortNameNode = node.find('{*}SHORT-NAME')
-            if shortNameNode is not None:
-                names.append(shortNameNode.text)
 
-            return self.__compute_path(node.getparent(), names)
-    
-    def __build_path(self, names):
-        returnValue = ''
-        for name in names:
-            returnValue = returnValue + '/' + name
-        return returnValue
-    
     def __get_definition_path_of_node(self, node):
         definitionPath = None
         definitionRef = node.find('{*}DEFINITION-REF').text
@@ -133,20 +220,33 @@ class AutosarNode:
             definitionPath = self.__build_path(resulantDefNames)
         return definitionPath
 
-    def get_parent(self):
-        return self.__parent
 
-    def get_short_name(self):
-        return self.__name
+    def __compute_path(self, node, names):
+        #get all path until the AUTOSAR root node
+        if etree.QName(node).localname == 'AUTOSAR':
+            return names
+        else:
+            shortNameNode = node.find('{*}SHORT-NAME')
+            if shortNameNode is not None:
+                names.append(shortNameNode.text)
 
-    def get_definition_name(self):
-        return self.__definitionName
-    
+            return self.__compute_path(node.getparent(), names)
+
+
+    def __build_path(self, names):
+        returnValue = ''
+        for name in names:
+            returnValue = returnValue + '/' + name
+        return returnValue
+
+
     def get_node(self):
-        return self.__node
-    
-    def get_path(self):
-        return self.__path
+        return self._node
+
+
+    def get_parent(self):
+        return self._parent
+
 
     def _set_model_modified(self, value):
         """ 
@@ -154,7 +254,47 @@ class AutosarNode:
         the parent until the module node is found. 
         Please check the module sub class for more info.
         """
-        self.__parent._set_model_modified(value)
+        self._parent._set_model_modified(value)
+
+
+    @staticmethod
+    def _add_or_get_xml_node(parentNode, tag_name, dest=None):
+        """
+        Get or create a new xml node with the tagName.
+        :param tag_name: The tag name which needs to be created.
+        :param dest: optional DEST attribte for the tags.
+        """
+        xmlNode = parentNode.find('{*}' + tag_name)
+        if xmlNode is None:
+            xmlNode = etree.SubElement(parentNode, tag_name, attrib = ({'DEST' : dest} if dest is not None else None))
+
+        return xmlNode
+
+
+    @staticmethod
+    def _create_node(tag_name, short_name=None, dest=None, definition_ref=None):
+        element = etree.Element(tag_name)
+        if short_name is not None:
+            shortNameNode = etree.SubElement(element , 'SHORT-NAME')
+            shortNameNode.text = short_name
+        if dest is not None and definition_ref is not None:
+            defRef = etree.SubElement(element , 'DEFINITION-REF', attrib = {'DEST' : dest})
+            defRef.text = definition_ref
+
+        return element
+
+
+    def __repr__(self):
+        return (self.__class__.__name__ + '(' + self.path + ')')
+
+
+    def __hash__(self):
+        return hash(self.path)
+
+
+    def __eq__(self, other):
+        return (self.path == other.path)
+
 
 # Module configuration node(root node for the respective module)
 class {{ module.get_name() }}(AutosarNode):
@@ -162,22 +302,21 @@ class {{ module.get_name() }}(AutosarNode):
         """
         Constructor for {{ module.get_name() }} node.
 
-        @param file: The input file used to create the module.
-        @param rootNode: The root node corresponding to the file.
-        @param node: The xml node for which the autosar node needs to be created.
+        :param file: The input file used to create the module.
+        :param rootNode: The root node corresponding to the file.
+        :param node: The xml node for which the autosar node needs to be created.
         """
         super().__init__(None, node, '{{ module.get_name() }}', '{{ module.get_path() }}')
         self.__rootNode = rootNode
         self.__file = file
         self.__isModelModified = False
         {% for container in module.get_containers() -%}
-            {%- if container.is_multi_instance_container() %}
+            {%- if container.is_multi_instance() %}
         self.__{{ container.get_name() }}s = []
             {%- else %}
         self.__{{ container.get_name() }} = None
             {%- endif %}  
         {%- endfor %}
-
 
         for container in node.findall('{*}CONTAINERS/{*}ECUC-CONTAINER-VALUE'):
             definitionRef = container.find('{*}DEFINITION-REF').text
@@ -189,39 +328,151 @@ class {{ module.get_name() }}(AutosarNode):
                 {%- else %}
                 elif definitionName == '{{ container.get_name() }}':
                 {%- endif %}
-                {%- if container.is_multi_instance_container() %}
+                {%- if container.is_multi_instance() %}
                     self.__{{ container.get_name() }}s.append({{ container.get_class_name() }}(self, container))
                 {%- else %}
                     self.__{{ container.get_name() }} = {{ container.get_class_name() }}(self, container)
                 {%- endif %}  
             {%- endfor %}
 
+
     def _set_model_modified(self, value):
         self.__isModelModified = True
-    
+
+
     def is_model_modified(self):
         return self.__isModelModified
 
 {% for container in module.get_containers() %}
-    #Returns the configuration container {{ container.get_name() }}
-    {%- if container.is_multi_instance_container() %}
+    {%- if container.is_multi_instance() %}
     def get_{{ container.get_name() }}s(self):
         return self.__{{ container.get_name() }}s
+
+    def __add_{{ container.get_name() }}(self, value):
+        """
+        Adds a new {{ container.get_name() }}.
+        :raise InvalidChildNodeException: If a container with same name already exists, 
+                                          or if the maximum allowed instance is reached.
+        """
+        if value in self.__get_children():
+            raise InvalidChildNodeException('Operation not possible. A container with name {} already present in {}.'.format(value.name, self))
+
+        containers = AutosarNode._add_or_get_xml_node(self._node, 'CONTAINERS')
+        {%- if container.is_upper_multiplicity_infinite %}
+        self.__{{ container.get_name() }}s.append(value)
+        {%- else %}
+        if len(self.__{{ container.get_name() }}s) == {{ container.upper_multiplicity }}:
+            raise InvalidChildNodeException('Operation not possible. According to the definition file, only a maximum of {{ container.upper_multiplicity }} instances of {{ container.get_name() }} are allowed.')
+
+        self.__{{ container.get_name() }}s.append(value)
+        {%- endif %}
+        containers.append(value._node)
+        self._set_model_modified(True)
+
+    def remove_{{ container.get_name() }}(self, value):
+        if value is not None:
+            containers = AutosarNode._add_or_get_xml_node(self._node, 'CONTAINERS')
+            containers.remove(value._node)
+            self.__{{ container.get_name() }}s.remove(value)
+            self._set_model_modified(True)
+
+    def removeAll_{{ container.get_name() }}(self):
+        for cont in self.__{{ container.get_name() }}s:
+            self.remove_{{ container.get_name() }}(cont)
+
     {%- else %}
     def get_{{ container.get_name() }}(self):
         return self.__{{ container.get_name() }}
-    {%- endif %}  
+
+    def remove_{{ container.get_name() }}(self):
+        containers = AutosarNode._add_or_get_xml_node(self._node, 'CONTAINERS')
+        containers.remove(self.__{{ container.get_name() }}._node)
+        self.__{{ container.get_name() }} = None
+        self._set_model_modified(True)
+
+    {%- endif %}
+
+
+    def new_{{ container.get_name() }}(self, name, add_mandatory_elements=False):
+        """
+        Creates a new {{ container.get_name() }} with the given name.
+        :param: The name of the container
+        :param add_mandatory_elements: Pass True if the the mandatory sub-containers/parameters/references 
+                                       for should be created(please note that this depends on the attribute 
+                                       "LOWER-MULTIPLICITY" of the respective containers/parameters/references 
+                                       from the definition file. This option has no relevance if there are no 
+                                       containers/parameters/references with "LOWER-MULTIPLICITY" greater than 0).
+        :raise InvalidChildNodeException: If a container with same name already exists, 
+                                          or if the maximum allowed instance is reached.
+        """
+        {%- if container.is_multi_instance() %}
+        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ container.get_tag() }}', definition_ref='{{ container.full_path_until_root }}')
+        value = {{ container.get_name() }}(self, xmlNode)
+        self.__add_{{ container.get_name() }}(value)
+        {% if container.any_mandatory_sub_containers_or_parameters_or_references() %}
+        # Add mandatory sub-containers/parameters/references
+        if add_mandatory_elements:
+            self.__add_mandatory_elements_for_{{ container.get_name() }}(value, add_mandatory_elements)
+        {% endif -%}
+        return value
+        {%- else %}
+        if self.__{{ container.get_name() }} is not None:
+            raise InvalidChildNodeException('Operation not possible. {{ container.get_name() }} already exists. Use get_{{ container.get_name() }} to access the container.')
+
+        containers = AutosarNode._add_or_get_xml_node(self._node, 'CONTAINERS')
+        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ container.get_tag() }}', definition_ref='{{ module.full_path_until_root }}')
+        containers.append(xmlNode)
+        self.__{{ container.get_name() }} = {{ container.get_name() }}(self, xmlNode)
+        {% if container.any_mandatory_sub_containers_or_parameters_or_references() %}
+        # Add mandatory sub-containers/parameters/references
+        if add_mandatory_elements:
+            self.__add_mandatory_elements_for_{{ container.get_name() }}(self.__{{ container.get_name() }}, add_mandatory_elements)
+        {% endif -%}
+        self._set_model_modified(True)
+        return self.__{{ container.get_name() }}
+        {%- endif %}
+
+    {% if container.any_mandatory_sub_containers_or_parameters_or_references() -%}
+    def __add_mandatory_elements_for_{{ container.get_name() }}(self, newCont, add_mandatory_elements):
+        {%- for subcontainer in container.get_sub_containers() %}
+        {%- if not subcontainer.is_optional %}
+        newCont.new_{{ subcontainer.get_name() }}('{{ subcontainer.get_name() }}_0', add_mandatory_elements)
+        {%- endif %}
+        {%- endfor %}
+        {%- for parameter in container.get_parameters() %}
+        {%- if not parameter.is_optional %}
+        newCont.new_{{ parameter.get_name() }}()
+        {%- endif %}
+        {%- endfor %}
+        {%- for reference in container.get_references() %}
+        {%- if not reference.is_optional %}
+        newCont.new_{{ reference.get_name() }}()
+        {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+
 {% endfor %}
 
-    def save(self, file = None):
+    def __get_children(self):
+        children = []
+        {%- for container in module.get_containers() -%}
+        {%- if container.is_multi_instance() %}
+        children.extend(self.__{{ container.get_name() }}s)
+        {%- else %}
+        if self.__{{ container.get_name() }} is not None:
+            children.append(self.__{{ container.get_name() }})
+        {%- endif %}
+        {%- endfor %}
+        return children
+
+
+    def save(self, file=None):
         """
         Saves the configuration:
             - To the file passed as argument
             - Overwrite the existing file if no argument is provided
         
-        Raises an exception if save() is called without a module
-
-        @param file: The file location where the configuration needs to be saved.
+        :param file: The file location where the configuration needs to be saved.
         """
         if self.__isModelModified is False:
             return 'The model is not changed. Ignoring the save request!'
@@ -238,5 +489,22 @@ class {{ module.get_name() }}(AutosarNode):
 # Exception classes
 class ValueNotPossibleError(Exception):
     """Exception raised when the provided value is not possible to set for the parameter"""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class ModuleAlreadyLoaded(Exception):
+    """Exception raised when the module is already created/loaded"""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class ModuleNotFoundError(Exception):
+    """Exception raised if the module is not found in the input file"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class InvalidChildNodeException(Exception):
+    """Exception raised when an invalid node is set."""
     def __init__(self, message):
         super().__init__(message)

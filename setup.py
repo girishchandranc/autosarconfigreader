@@ -18,8 +18,10 @@ setup(
     author='Girish Chandran',
     author_email='girishchandran.tpm@gmail.com',
     url='https://github.com/girishchandranc/autosarconfigreader',
-    license=license,
+    license="MIT",
     packages=find_packages(exclude=('tests')),
     include_package_data=True,
+    install_requires=["lxml>=4.6.1",
+                        "Jinja2>=2.11.2"],
     python_requires='>=3.6',
 )

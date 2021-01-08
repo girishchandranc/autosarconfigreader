@@ -33,34 +33,67 @@ class AutosarNode:
     def __init__(self, node):
         self.__xmlNode = node
         self.__name = node.find('{*}SHORT-NAME').text
+
         names = []
         names.append(self.__name)
         self.__compute_path(node.getparent(), names)
         self.__path = self.__build_path(names)
+
+        names.clear()
+        names.append(self.__name)
+        self.__compute_path(node.getparent(), names, process_until_root=True)
+        self.full_path_until_root = self.__build_path(names)
+
+        self.is_optional = True
+        self.upper_multiplicity = 1
+        self.is_upper_multiplicity_infinite = False
+
+        multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
+        if multiInstanceNode is not None: 
+            if multiInstanceNode.text == '*':
+                self.is_upper_multiplicity_infinite = True
+            elif int(multiInstanceNode.text) > 1:
+                self.upper_multiplicity = int(multiInstanceNode.text)
+        else:
+            multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
+            if multiInstanceNode is not None and (multiInstanceNode.text == 'true' or multiInstanceNode.text == '1'):
+                self.is_upper_multiplicity_infinite = True
+
+        lowerMulNode = node.find('{*}LOWER-MULTIPLICITY')
+        if lowerMulNode is not None and int(lowerMulNode.text) > 0:
+            self.is_optional = False
+
         self.__className = self.__name if isinstance(self, (Module, Parameter, Reference)) else AutosarNode.__identify_class_name(self.__name)
 
-    def __compute_path(self, node, names):
-        #get all path until the ELEMENTS root node
-        if node.tag.endswith('ELEMENTS'):
+
+    def __compute_path(self, node, names, process_until_root = False):
+        if etree.QName(node).localname == 'ELEMENTS' and process_until_root is False:
+            return names
+        elif etree.QName(node).localname == 'AUTOSAR':
             return names
         else:
             shortNameNode = node.find('{*}SHORT-NAME')
             if shortNameNode is not None:
                 names.append(shortNameNode.text)
 
-            return self.__compute_path(node.getparent(), names)
-    
+            return self.__compute_path(node.getparent(), names, process_until_root)
+
+
     def __build_path(self, names):
         returnValue = ''
         for name in reversed(names):
             returnValue = returnValue + '/' + name
         return returnValue
-    
+
+
     def get_name(self):
         return self.__name
     
     def get_path(self):
         return self.__path
+
+    def is_multi_instance(self):
+        return self.is_upper_multiplicity_infinite or (self.upper_multiplicity > 1)
 
     def get_class_name(self):
         return self.__className
@@ -95,20 +128,14 @@ class Module(AutosarNode):
     def get_containers(self):
         return self.__containers
 
+    def any_mandatory_containers(self):
+        return any((con.is_optional is False) for con in self.__containers)
+
 #Representation of autosar container node
 class Container(AutosarNode):
     def __init__(self, node, isChoiceContainer):
         super().__init__(node)
-        self.__isChoiceContainer = isChoiceContainer
-        self.__isMultiInstance = False
-
-        multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
-        if multiInstanceNode is not None and (multiInstanceNode.text == '*' or int(multiInstanceNode.text) > 1):
-            self.__isMultiInstance = True
-        else:
-            multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
-            if multiInstanceNode is not None and multiInstanceNode.text == 'true':
-                self.__isMultiInstance = True
+        self.__isChoiceContainer = isChoiceContainer        
 
         self.__subcontainers = []
         for containerNode in node.findall('{*}SUB-CONTAINERS/{*}ECUC-PARAM-CONF-CONTAINER-DEF'):
@@ -127,36 +154,36 @@ class Container(AutosarNode):
         parametersNode = containerNode.find('{*}PARAMETERS')
         if parametersNode is not None:
             for param in parametersNode.findall('{*}ECUC-INTEGER-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.INTEGER))
+                self.__parameters.append(Parameter(param, ParameterTypes.INTEGER, 'ECUC-INTEGER-PARAM-DEF'))
             for param in parametersNode.findall('{*}ECUC-BOOLEAN-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.BOOLEAN))
+                self.__parameters.append(Parameter(param, ParameterTypes.BOOLEAN, 'ECUC-BOOLEAN-PARAM-DEF'))
             for param in parametersNode.findall('{*}ECUC-FLOAT-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.FLOAT))
+                self.__parameters.append(Parameter(param, ParameterTypes.FLOAT, 'ECUC-FLOAT-PARAM-DEF'))
             for param in parametersNode.findall('{*}ECUC-STRING-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.STRING))
+                self.__parameters.append(Parameter(param, ParameterTypes.STRING, 'ECUC-STRING-PARAM-DEF'))
             for param in parametersNode.findall('{*}ECUC-ENUMERATION-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.ENUMERATION))
+                self.__parameters.append(Parameter(param, ParameterTypes.ENUMERATION, 'ECUC-ENUMERATION-PARAM-DEF'))
             for param in parametersNode.findall('{*}ECUC-FUNCTION-PARAM-DEF'):
-                self.__parameters.append(Parameter(param, ParameterTypes.FUNCTION))
+                self.__parameters.append(Parameter(param, ParameterTypes.FUNCTION, 'ECUC-FUNCTION-PARAM-DEF'))
 
     def __build_references(self, containerNode):
         referencesNode = containerNode.find('{*}REFERENCES')
         if referencesNode is not None:
             for reference in referencesNode.findall('{*}ECUC-REFERENCE-DEF'):
-                self.__references.append(Reference(reference, ReferenceTypes.SIMPLE_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.SIMPLE_REFERENCE, 'ECUC-REFERENCE-DEF'))
             for reference in referencesNode.findall('{*}ECUC-CHOICE-REFERENCE-DEF'):
-                self.__references.append(Reference(reference, ReferenceTypes.CHOICE_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.CHOICE_REFERENCE, 'ECUC-CHOICE-REFERENCE-DEF'))
             for reference in referencesNode.findall('{*}ECUC-FOREIGN-REFERENCE-DEF'):
-                self.__references.append(Reference(reference, ReferenceTypes.FOREIGN_REFERENCE))
+                self.__references.append(Reference(reference, ReferenceTypes.FOREIGN_REFERENCE, 'ECUC-FOREIGN-REFERENCE-DEF'))
 
     def is_choice_container(self):
         return self.__isChoiceContainer
 
-    def is_multi_instance_container(self):
-        return self.__isMultiInstance
-
     def get_sub_containers(self):
         return self.__subcontainers
+
+    def any_mandatory_sub_containers_or_parameters_or_references(self):
+        return any((con.is_optional is False) for con in self.__subcontainers) or any((con.is_optional is False) for con in self.__parameters) or any((con.is_optional is False) for con in self.__references)
 
     def get_parameters(self):
         return self.__parameters
@@ -164,12 +191,15 @@ class Container(AutosarNode):
     def get_references(self):
         return self.__references
 
+    def get_tag(self):
+        return 'ECUC-CHOICE-CONTAINER-DEF' if self.__isChoiceContainer else 'ECUC-PARAM-CONF-CONTAINER-DEF'
+
 #Representation of autosar parameter node
 class Parameter(AutosarNode):
-    def __init__(self, node, parameterType):
+    def __init__(self, node, parameterType, tag):
         super().__init__(node)
         self.__parameterType = parameterType
-        
+        self.tag = tag
         self.__defaultValue = None
         self.__isDefaultSet = False
         self.__set_default_value(node)
@@ -232,28 +262,21 @@ class Parameter(AutosarNode):
     
     def is_max_value_set(self):
         return self.__isMaxValueSet
-    
+
     def get_enum_literals(self):
         return self.__enumLiterals
 
+
 #Representation of autosar reference node
 class Reference(AutosarNode):
-    def __init__(self, node, referenceType):
+    def __init__(self, node, referenceType, tag):
         super().__init__(node)
         self.__referenceType = referenceType
+        self.tag = tag
         self.__targetRef = None
         self.__targetRefs = []
         self.__targetType = None
         self.__set_detinations(node)
-        self.__isMultiInstance = False
-
-        multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY')
-        if multiInstanceNode is not None and (multiInstanceNode.text == '*' or int(multiInstanceNode.text) > 1):
-            self.__isMultiInstance = True
-        else:
-            multiInstanceNode = node.find('{*}UPPER-MULTIPLICITY-INFINITE')
-            if multiInstanceNode is not None and multiInstanceNode.text == 'true':
-                self.__isMultiInstance = True
 
     def __set_detinations(self, node):
         if self.__referenceType == ReferenceTypes.SIMPLE_REFERENCE:
@@ -273,18 +296,28 @@ class Reference(AutosarNode):
 
     def get_type(self):
         return self.__referenceType
-    
-    def is_multi_instance_reference(self):
-        return self.__isMultiInstance
 
-    #gets the target reference for simple reference if configured in the definition file
     def get_destination(self):
+        """
+        gets the target reference for simple reference if configured in the definition file
+        """
         return self.__targetRef
-    
-    #gets the target references for choice reference if configured in the definition file
+
     def get_destinations(self):
+        """
+        gets the target references for choice reference if configured in the definition file
+        """
         return self.__targetRefs
-    
-    #gets the target type for foreign reference if configured in the definition file
+
     def get_destination_type(self):
+        """
+        gets the target type for foreign reference if configured in the definition file
+        """
         return self.__targetType
+
+    def get_dest_tag_for_ref_value(self):
+        if self.__referenceType == ReferenceTypes.SIMPLE_REFERENCE or self.__referenceType == ReferenceTypes.CHOICE_REFERENCE:
+            return "ECUC-CONTAINER-VALUE"
+        else:
+            # Update the if/else branch when more ref types are supported.
+            return self.__targetType

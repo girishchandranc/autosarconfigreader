@@ -54,14 +54,14 @@ def test_container_node():
 
     contB = module.get_containers()[1]
     assert (contB.get_name() == 'contB'), "second container name should be contB"
-    assert (contB.is_multi_instance_container()), "contB is a multi instance container"
+    assert (contB.is_multi_instance()), "contB is a multi instance container"
 
     subCont = contB.get_sub_containers()[0]
     assert(subCont.get_name() == 'subCont'), "sub container name should be subCont"
 
     contC = module.get_containers()[2]
     assert (contC.get_name() == 'contC'), "third container name should be contC"
-    assert (contC.is_multi_instance_container()), "contC is a multi instance container"
+    assert (contC.is_multi_instance()), "contC is a multi instance container"
 
 def test_parameter_node():
     """
@@ -116,7 +116,7 @@ def test_reference_node():
     
     ref2 = subCont.get_references()[1]
     assert (ref2.get_name() == 'ref2'), "reference name should be ref2"
-    assert (ref2.is_multi_instance_reference()), "ref2 can have multiple values"
+    assert (ref2.is_multi_instance()), "ref2 can have multiple values"
     assert (ref2.get_destination() == '/ModuleDef/demo/contC'), "destinationRef for ref1 is /ModuleDef/demo/contC"
 
     foreignRef = subCont.get_references()[2]

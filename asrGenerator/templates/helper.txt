@@ -1,20 +1,20 @@
-{%- macro createContainerClass(container) -%}
+{%- macro createContainerClass(container, ParameterTypes) -%}
 # Container configuration node for {{ container.get_name() }}
 class {{ container.get_class_name() }}(AutosarNode):
     def __init__(self, parent, node):
         """
         Constructor for {{ container.get_name() }} node.
 
-        @param parent: The parent node under which the autosar node needs to be created.
-        @param node: The xml node for which the autosar node needs to be created.
+        :param parent: The parent node under which the autosar node needs to be created.
+        :param node: The xml node for which the autosar node needs to be created.
         """
         super().__init__(parent, node, '{{ container.get_name() }}', '{{ container.get_path() }}')
         self.__isChoiceContainer = {{ container.is_choice_container() }}
 
         {%- if container.get_sub_containers()|length > 0 %}
-        #containers
+        # containers
             {%- for subContainer in container.get_sub_containers() %}
-                {%- if subContainer.is_multi_instance_container() %}
+                {%- if subContainer.is_multi_instance() %}
         self.__{{ subContainer.get_name() }}s = []
                 {%- else %}
         self.__{{ subContainer.get_name() }} = None
@@ -31,7 +31,7 @@ class {{ container.get_class_name() }}(AutosarNode):
                 {%- else %}
                 elif definitionName == '{{ subContainer.get_name() }}':
                 {%- endif %}
-                {%- if subContainer.is_multi_instance_container() %}
+                {%- if subContainer.is_multi_instance() %}
                     self.__{{ subContainer.get_name() }}s.append({{ subContainer.get_class_name() }}(self, subContainer))
                 {%- else %}
                     self.__{{ subContainer.get_name() }} = {{ subContainer.get_class_name() }}(self, subContainer)
@@ -40,7 +40,7 @@ class {{ container.get_class_name() }}(AutosarNode):
         {%- endif %}
 
         {%- if container.get_parameters()|length > 0 %}
-        #parameters
+        # parameters
             {%- for parameter in container.get_parameters() %}
         self.__{{ parameter.get_name() }}_value = None
             {%- endfor %}
@@ -60,9 +60,9 @@ class {{ container.get_class_name() }}(AutosarNode):
         {%- endif %}
 
         {%- if container.get_references()|length > 0 %}
-        #references
+        # references
             {%- for reference in container.get_references() %}
-                {%- if reference.is_multi_instance_reference() %}
+                {%- if reference.is_multi_instance() %}
         self.__{{ reference.get_name() }}_values = []
                 {%- else %}
         self.__{{ reference.get_name() }}_value = None
@@ -79,7 +79,7 @@ class {{ container.get_class_name() }}(AutosarNode):
             {%- else %}
                 elif definitionName == '{{ reference.get_name() }}':
             {%- endif %}
-            {%- if reference.is_multi_instance_reference() %}
+            {%- if reference.is_multi_instance() %}
                     self.__{{ reference.get_name() }}_values.append(self.{{ reference.get_class_name() }}(self, reference))
             {%- else %}
                     self.__{{ reference.get_name() }}_value = self.{{ reference.get_class_name() }}(self, reference)
@@ -91,31 +91,232 @@ class {{ container.get_class_name() }}(AutosarNode):
         return self.__isChoiceContainer
 
 {% for subContainer in container.get_sub_containers() %}
-    #Returns the configuration container {{ subContainer.get_name() }}
-    {%- if subContainer.is_multi_instance_container() %}
+    {%- if subContainer.is_multi_instance() %}
     def get_{{ subContainer.get_name() }}s(self):
         return self.__{{ subContainer.get_name() }}s
+
+    def __add_{{ subContainer.get_name() }}(self, value):
+        """
+        Adds a new {{ subContainer.get_name() }}.
+        :raise InvalidChildNodeException: If a container with same name already exists, 
+                                          or if the maximum allowed instance is reached.
+        """
+        if value in self.__get_children():
+            raise InvalidChildNodeException('Operation not possible. A container with name {} already present in {}.'.format(value.name, self))
+
+        subContainers = AutosarNode._add_or_get_xml_node(self._node, 'SUB-CONTAINERS')
+        {%- if subContainer.is_upper_multiplicity_infinite %}
+        self.__{{ subContainer.get_name() }}s.append(value)
+        {%- else %}
+        if len(self.__{{ subContainer.get_name() }}s) == {{ subContainer.upper_multiplicity }}:
+            raise InvalidChildNodeException('Operation not possible. According to the definition file, only a maximum of {{ subContainer.upper_multiplicity }} instances of {{ subContainer.get_name() }} are allowed.')
+
+        self.__{{ subContainer.get_name() }}s.append(value)
+        {%- endif %}
+        subContainers.append(value._node)
+
+    def remove_{{ subContainer.get_name() }}(self, value):
+        if value is not None:
+            subContainers = AutosarNode._add_or_get_xml_node(self._node, 'SUB-CONTAINERS')
+            subContainers.remove(value._node)
+            self.__{{ subContainer.get_name() }}s.remove(value)
+
+    def removeAll_{{ subContainer.get_name() }}(self):
+        for cont in self.__{{ subContainer.get_name() }}s:
+            self.remove_{{ subContainer.get_name() }}(cont)
+
     {%- else %}
     def get_{{ subContainer.get_name() }}(self):
         return self.__{{ subContainer.get_name() }}
-    {%- endif %}  
-{% endfor -%}
 
-{%- for parameter in container.get_parameters() %}
-    #Returns the parameter {{ parameter.get_name() }}
+    def remove_{{ subContainer.get_name() }}(self):
+        subContainers = AutosarNode._add_or_get_xml_node(self._node, 'SUB-CONTAINERS')
+        subContainers.remove(self.__{{ subContainer.get_name() }}._node)
+        self.__{{ subContainer.get_name() }} = None
+
+    {%- endif %}
+
+
+    def new_{{ subContainer.get_name() }}(self, name, add_mandatory_elements=False):
+        """
+        :param: The name of the container
+        :param add_mandatory_elements: Pass True if the the mandatory sub-containers/parameters/references 
+                                       for should be created(please note that this depends on the attribute 
+                                       "LOWER-MULTIPLICITY" of the respective containers/parameters/references 
+                                       from the definition file. This option has no relevance if there are no 
+                                       containers/parameters/references with "LOWER-MULTIPLICITY" greater than 0).
+        Creates a new {{ subContainer.get_name() }} with the given name.
+        :raise InvalidChildNodeException: If a container with same name already exists, 
+                                          or if the maximum allowed instance is reached.
+        """
+        {%- if subContainer.is_multi_instance() %}
+        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ subContainer.get_tag() }}', definition_ref='{{ subContainer.full_path_until_root }}')
+        value = {{ subContainer.get_name() }}(self, xmlNode)
+        self.__add_{{ subContainer.get_name() }}(value)
+        {% if container.any_mandatory_sub_containers_or_parameters_or_references() %}
+        # Add mandatory sub-containers/parameters/references
+        if add_mandatory_elements:
+            self.__add_mandatory_elements_for_{{ subContainer.get_name() }}(value, add_mandatory_elements)
+        {% endif -%}
+        return value
+        {%- else %}
+        if self.__{{ subContainer.get_name() }} is not None:
+            raise InvalidChildNodeException('Operation not possible. {{ subContainer.get_name() }} already exists. Use get_{{ subContainer.get_name() }} to access the container.')
+
+        subContainers = AutosarNode._add_or_get_xml_node(self._node, 'SUB-CONTAINERS')
+        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ subContainer.get_tag() }}', definition_ref='{{ subContainer.full_path_until_root }}')
+        subContainers.append(xmlNode)
+        self.__{{ subContainer.get_name() }} = {{ subContainer.get_name() }}(self, xmlNode)
+        {% if subContainer.any_mandatory_sub_containers_or_parameters_or_references() %}
+        # Add mandatory sub-containers/parameters/references
+        if add_mandatory_elements:
+            self.__add_mandatory_elements_for_{{ subContainer.get_name() }}(self.__{{ subContainer.get_name() }}, add_mandatory_elements)
+        {% endif -%}
+        self._set_model_modified(True)
+        return self.__{{ subContainer.get_name() }}
+        {%- endif %}
+
+    {% if subContainer.any_mandatory_sub_containers_or_parameters_or_references() -%}
+    def __add_mandatory_elements_for_{{ subContainer.get_name() }}(self, newCont, add_mandatory_elements):
+        {%- for subsubcontainer in subContainer.get_sub_containers() %}
+        {%- if not subsubcontainer.is_optional %}
+        newCont.new_{{ subsubcontainer.get_name() }}('{{ subsubcontainer.get_name() }}_0', add_mandatory_elements)
+        {%- endif %}
+        {%- endfor %}
+        {%- for parameter in subContainer.get_parameters() %}
+        {%- if not parameter.is_optional %}
+        newCont.new_{{ parameter.get_name() }}()
+        {%- endif %}
+        {%- endfor %}
+        {%- for reference in subContainer.get_references() %}
+        {%- if not reference.is_optional %}
+        newCont.new_{{ reference.get_name() }}()
+        {%- endif %}
+        {%- endfor %}
+    {%- endif %}
+{% endfor %}
+
+    def __get_children(self):
+        children = []
+        {%- for subContainer in container.get_sub_containers() -%}
+        {%- if subContainer.is_multi_instance() %}
+        children.extend(self.__{{ subContainer.get_name() }}s)
+        {%- else %}
+        if self.__{{ subContainer.get_name() }} is not None:
+            children.append(self.__{{ subContainer.get_name() }})
+        {%- endif %}
+        {%- endfor %}
+        return children
+
+{% for parameter in container.get_parameters() %}
     def get_{{ parameter.get_name() }}(self):
         return self.__{{ parameter.get_name() }}_value
+
+    def new_{{ parameter.get_name() }}(self):
+        """
+        Creates a new {{ parameter.get_name() }}.
+        :raise InvalidChildNodeException: If the parameter already exists.
+        """
+        if self.__{{ parameter.get_name() }}_value is not None:
+            raise InvalidChildNodeException('Operation not possible. {{ parameter.get_name() }} already exists. Use get_{{ parameter.get_name() }} to access the parameter.')
+
+        paremeters = AutosarNode._add_or_get_xml_node(self._node, 'PARAMETER-VALUES')
+        {%- if (parameter.get_type() == ParameterTypes.INTEGER or parameter.get_type() == ParameterTypes.FLOAT or parameter.get_type() == ParameterTypes.BOOLEAN) %}
+        xmlNode = AutosarNode._create_node('ECUC-NUMERICAL-PARAM-VALUE', dest='{{ parameter.tag }}', definition_ref='{{ parameter.full_path_until_root }}')
+        {% else %}
+        xmlNode = AutosarNode._create_node('ECUC-TEXTUAL-PARAM-VALUE', dest='{{ parameter.tag }}', definition_ref='{{ parameter.full_path_until_root }}')
+        {%- endif %}
+        paremeters.append(xmlNode)
+        value = AutosarNode._add_or_get_xml_node(self._node, 'VALUE')
+        {%- if (parameter.get_type() == ParameterTypes.BOOLEAN) %}
+        {%- if (parameter.get_default_value()) %}
+        # set default value if available
+        value.text = '1'
+        {% else %}
+        # set default value if available
+        value.text = '0'
+        {%- endif %}
+        {% elif parameter.get_default_value() is not none %}
+        # set default value if available
+        value.text = str({{ parameter.get_default_value() }})
+        {%- endif %}
+        xmlNode.append(value)
+
+        self.__{{ parameter.get_name() }}_value = self.{{ parameter.get_name() }}(self, xmlNode)
+        self._set_model_modified(True)
+        return self.__{{ parameter.get_name() }}_value
+
 {% endfor -%}
 
 {%- for reference in container.get_references() %}
-    #Returns the reference {{ reference.get_name() }}
-    {%- if reference.is_multi_instance_reference() %}
+    {%- if reference.is_multi_instance() %}
     def get_{{ reference.get_name() }}s(self):
         return self.__{{ reference.get_name() }}_values
+
+    def __add_{{ reference.get_name() }}(self, value):
+        """
+        Adds a new {{ reference.get_name() }}.
+        :raise InvalidChildNodeException: If the maximum allowed instance is reached.
+        """
+        references = AutosarNode._add_or_get_xml_node(self._node, 'REFERENCE-VALUES')
+        {%- if reference.is_upper_multiplicity_infinite %}
+        self.__{{ reference.get_name() }}_values.append(value)
+        {%- else %}
+        if len(self.__{{ reference.get_name() }}_values) == {{ reference.upper_multiplicity }}:
+            raise InvalidChildNodeException('Operation not possible. According to the definition file, only a maximum of {{ reference.upper_multiplicity }} instances of {{ reference.get_name() }} are allowed.')
+
+        self.__{{ reference.get_name() }}_values.append(value)
+        {%- endif %}
+        references.append(value._node)
+        self._set_model_modified(True)
+
+    def remove_{{ reference.get_name() }}(self, value):
+        if value is not None:
+            references = AutosarNode._add_or_get_xml_node(self._node, 'REFERENCE-VALUES')
+            references.remove(value._node)
+            self.__{{ reference.get_name() }}_values.remove(value)
+            self._set_model_modified(True)
+
+    def removeAll_{{ reference.get_name() }}(self):
+        for cont in self.__{{ reference.get_name() }}_values:
+            self.remove_{{ reference.get_name() }}(cont)
+
     {%- else %}
     def get_{{ reference.get_name() }}(self):
         return self.__{{ reference.get_name() }}_value
+
+    def remove_{{ reference.get_name() }}(self, value):
+        if value is not None:
+            references = AutosarNode._add_or_get_xml_node(self._node, 'REFERENCE-VALUES')
+            references.remove(self.__{{ reference.get_name() }}_value._node)
+            self.__{{ reference.get_name() }}_value = None
+            self._set_model_modified(True)
+
     {%- endif %}
+
+    def new_{{ reference.get_name() }}(self):
+        """
+        Creates a new {{ reference.get_name() }}.
+        :raise InvalidChildNodeException: If the reference already exists for 
+                                          single reference value.
+        """
+        {%- if reference.is_multi_instance() %}
+        xmlNode = AutosarNode._create_node('ECUC-REFERENCE-VALUE', dest='{{ reference.tag }}', definition_ref='{{ reference.full_path_until_root }}')
+        value = self.{{ reference.get_name() }}(self, xmlNode)
+        self.__add_{{ reference.get_name() }}(value)
+        return value
+        {%- else %}
+        {%- endif %}
+        if self.__{{ reference.get_name() }}_value is not None:
+            raise InvalidChildNodeException('Operation not possible. {{ reference.get_name() }} already exists. Use get_{{ reference.get_name() }} to access the reference.')
+
+        references = AutosarNode._add_or_get_xml_node(self._node, 'REFERENCE-VALUES')
+        xmlNode = AutosarNode._create_node('ECUC-REFERENCE-VALUE', dest='{{ reference.tag }}', definition_ref='{{ reference.full_path_until_root }}')
+        references.append(xmlNode)
+        self.__{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(self, xmlNode)
+        self._set_model_modified(True)
+        return self.__{{ reference.get_name() }}_value
+
 {% endfor -%}
 {%- endmacro %}
 
@@ -126,13 +327,14 @@ class {{ container.get_class_name() }}(AutosarNode):
             """
             Constructor for {{ parameter.get_name() }} node.
 
-            @param parent: The parent node under which the autosar node needs to be created.
-            @param node: The xml node for which the autosar node needs to be created.
+            :param parent: The parent node under which the autosar node needs to be created.
+            :param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, '{{ parameter.get_name() }}', '{{ parameter.get_path() }}')
             self.__value = None
             self.__valueNode = node.find('{*}VALUE')
             paramValue = self.__valueNode.text if self.__valueNode is not None else None
+            self.__valueNode = AutosarNode._add_or_get_xml_node(node, 'VALUE') if self.__valueNode is None else self.__valueNode
 {%- if parameter.get_type() == ParameterTypes.INTEGER %}
             if paramValue is not None:
                 self.__value = int(paramValue)
@@ -159,12 +361,16 @@ class {{ container.get_class_name() }}(AutosarNode):
             self.__enumLiterals = {{ parameter.get_enum_literals() }}
 {%- endif %}
 
-        #Get the parameter value
         def get_value(self):
+            """
+            Returns the parameter value
+            """
             return self.__value
         
-        #set the parameter value
         def set_value(self, value):
+            """
+            Set a new value for the parameter
+            """
         {%- if parameter.get_type() == ParameterTypes.BOOLEAN %}
             self.__value = value
             self.__valueNode.text = '1' if value else '0'
@@ -189,8 +395,10 @@ class {{ container.get_class_name() }}(AutosarNode):
             self._set_model_modified(True)
         {%- endif %}
 
-        #Get the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
         def get_type(self):
+            """
+            Returns the type of parameter(if INTEGER, BOOLEAN, STRING, FUNCTION, FLOAT or ENUMERATION)
+            """
             return self.__type
     
         def is_default_value_set(self):
@@ -224,12 +432,13 @@ class {{ container.get_class_name() }}(AutosarNode):
             """
             Constructor for {{ reference.get_name() }} node.
 
-            @param parent: The parent node under which the autosar node needs to be created.
-            @param node: The xml node for which the autosar node needs to be created.
+            :param parent: The parent node under which the autosar node needs to be created.
+            :param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
             self.__valueNode = node.find('{*}VALUE-REF')
             self.__value = self.__valueNode.text if self.__valueNode is not None else None
+            self.__valueNode = AutosarNode._add_or_get_xml_node(node, 'VALUE-REF', dest='{{ reference.get_dest_tag_for_ref_value() }}') if self.__valueNode is None else self.__valueNode
             self.__type = {{ reference.get_type() }}
 {%- if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
             self.__destinationRef = '{{ reference.get_destination() }}'
@@ -239,38 +448,50 @@ class {{ container.get_class_name() }}(AutosarNode):
             self.__destinationType = '{{ reference.get_destination_type() }}'
 {%- endif %}
 
-        #Get the reference value
         def get_value(self):
+            """
+            Returns the value of the reference as string(path)
+            """
             return self.__value
 
-        #set the reference value
         def set_value(self, value):
+            """
+            Sets a new value as string(path) for the reference
+            """
             self.__value = value
             self.__valueNode.text = value
             self._set_model_modified(True)
 
-        #Get the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
         def get_type(self):
+            """
+            Returns the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
+            """
             return self.__type
     
 {% if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
-        #Gets the value of DESTINATION-REF from the definition file.
         def get_destination_ref(self):
+            """
+            Returns the value of 'DESTINATION-REF' from the definition file
+            """
             return self.__destinationRef
 {% elif reference.get_type() == ReferenceTypes.CHOICE_REFERENCE %}
-        #Gets the value of DESTINATION-REF from the definition file for CHOICE_REFERENCE.
         def get_destination_refs(self):
+            """
+            Returns the value of 'DESTINATION-REF' from the definition file
+            """
             return self.__destinationRefs
 {% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE %}
-        #Gets the value of DESTINATION-TYPE from the definition file for FOREIGN_REFERENCE.
         def get_destination_type(self):
+            """
+            Returns the value of DESTINATION-TYPE from the definition file for FOREIGN_REFERENCE
+            """
             return self.__destinationType
 {%- endif %}
 {%- endmacro %}
 
 
 {%- macro createContainer(container, ParameterTypes, ReferenceTypes) -%}
-{{ createContainerClass(container) }}
+{{ createContainerClass(container, ParameterTypes) }}
 {# Internal comment :  parameters and references will be generated as inner classes to the container class. #}
 {%- for parameter in container.get_parameters() %}
 {{ createParameterClass(parameter, ParameterTypes) }}

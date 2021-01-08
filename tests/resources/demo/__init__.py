@@ -1,3 +1,3 @@
-#This file is generated for the module 'demo' on Tue Dec 15 14:46:32 2020.
+#This file is generated for the module 'demo' on Fri Jan  8 11:12:56 2021.
 
-from . import *
+from . import demo

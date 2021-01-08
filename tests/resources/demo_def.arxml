@@ -24,10 +24,14 @@
                     <PARAMETERS>
                         <ECUC-BOOLEAN-PARAM-DEF>
                             <SHORT-NAME>boolParam</SHORT-NAME>
+                            <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                            <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
                             <DEFAULT-VALUE>false</DEFAULT-VALUE>
                         </ECUC-BOOLEAN-PARAM-DEF>
                         <ECUC-ENUMERATION-PARAM-DEF>
                             <SHORT-NAME>enumParam</SHORT-NAME>
+                            <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                            <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
                             <DEFAULT-VALUE>GREEN</DEFAULT-VALUE>
                             <LITERALS>
                                 <ECUC-ENUMERATION-LITERAL-DEF>
@@ -46,11 +50,11 @@
                 <ECUC-PARAM-CONF-CONTAINER-DEF>
                     <SHORT-NAME>contB</SHORT-NAME>
                     <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
-                    <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
+                    <UPPER-MULTIPLICITY-INFINITE>1</UPPER-MULTIPLICITY-INFINITE>
                     <SUB-CONTAINERS>
                         <ECUC-PARAM-CONF-CONTAINER-DEF>
                             <SHORT-NAME>subCont</SHORT-NAME>
-                            <LOWER-MULTIPLICITY>0</LOWER-MULTIPLICITY>
+                            <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
                             <UPPER-MULTIPLICITY-INFINITE>true</UPPER-MULTIPLICITY-INFINITE>
                             <PARAMETERS>
                                 <ECUC-INTEGER-PARAM-DEF>
