@@ -15,4 +15,9 @@ First release of the AutosarConfigReader. Please refer README for more informati
 ## [0.1.5]() - 2020-12-15
 ### Changed
 - Unique classes are generated if there exists containers with duplicate names
-- Module name option is now case-insenstive. Tool accepts both `-m com` or `-m Com`
+- Module name option is now case-insenstive. Tool accepts both `-m com` or `-m Com
+
+## [0.1.6]() - 2020-01-08
+### Added
+- New API `new` to create a new module configuration file
+- Its now possible to create new containers/parameters/reference.
