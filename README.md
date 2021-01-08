@@ -16,18 +16,18 @@ The asrGenerator package provides the option to read Autosar compliant ecu confi
     $ python setup.py install
 > use `python3` if you have both `python2` and `python3` installed.
 
-- Generate the code for your desired autosar module, by caling the python module `asrGenerator` with relevant arguments.
-```python
-python -m asrGenerator -i <input_file> -m <module_name> -o <output_folder>
-```
+- Generate the code for your desired autosar module, by calling `asrGenerator` with relevant arguments.
+
+    $ python -m asrGenerator -i <input_file> -m <module_name> -o <output_folder>
+
 > use `python3` if you have both `python2` and `python3` installed.
 - <input_file>: Provide the path to the autosar definition file.
 - <module_name>: Provide the module name for which the code needs to be generated.For eg: Rte
 - <output_folder>: Provide the location where the code needs to be generated.
 
 ## Using the generated python classes
-The generated package can be used for reading the autosar module configuration.
-- Simply include the package inside one of your scripts and call the function read_and_build_module_configuration(file) with the input configuration file. 
+The generated package can be used for reading/creating/modifying the autosar module configuration.
+- Simply include the package inside one of your scripts and call the function read(file) with the input configuration file. 
 
 > Example: Lets say we generated python package for Rte and now we want to read the Rte module configuration of the file passed as a commandline argument. The equivalent python code will look like:
 
@@ -35,7 +35,7 @@ The generated package can be used for reading the autosar module configuration.
 from Rte import Rte
 import sys
 
-rteNode = Rte.read_and_build_module_configuration(sys.argv[1])
+rteNode = Rte.read(sys.argv[1])
 if rteNode is not None:
     print('read sucessfull')
 else:
@@ -187,7 +187,7 @@ Once the package for 'demo' is generated, lets build up the model for 'demo' by 
 Python code to build the model:
 ```python
 from demo import demo
-    demoNode = demo.read_and_build_module_configuration(sys.argv[1])
+    demoNode = demo.read(sys.argv[1])
     if demoNode is not None:
         print('read sucessfull')
     else:
@@ -226,7 +226,7 @@ Container classes has getter methods for accessing the references, which in turn
 It is possible to access a container/parameter/reference by the fully qualified path. 
 
 ```python
-demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+demo.read(DESC_FILE_LOCATION)
 contB = demo.get_node('/ModuleConfig/demo/ContB_conf_0')
 assert (contB is not None), "cannot be None"
 ```
@@ -234,7 +234,7 @@ assert (contB is not None), "cannot be None"
 There also exists another utility function to access container/parameter/reference by providing the definition path. For eg: this could be handy in situations where you need to know the description nodes for a definition node.
 
 ```python
-demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+demo.read(DESC_FILE_LOCATION)
 contB = demo.get_nodes_for_definition_path('/demo/contB')
 assert (contB is not None), "cannot be None"
 assert (len(contB) == 2), "2 instance of contB are available"
@@ -247,7 +247,7 @@ assert (contB[1].get_short_name() == 'ContB_conf_1'), "short name is ContB_conf_
 It is possible to modify a parameter/reference values and save the changes. Changes are saved to the specified file passed to the `save()` method. If file name is not provided, the existing file is overwritten with the changes.
 
 ```python
-module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+module = demo.read(DESC_FILE_LOCATION)
 enumParam = demo.get_node('/ModuleConfig/demo/ContA_conf/enumParam')
 enumParam.set_value('YELLOW')
 intParam = demo.get_node('/ModuleConfig/demo/ContB_conf_0/subCont_conf/intParam')
@@ -261,7 +261,7 @@ module.save(TEST_OUT_LOCATION)
 There exists a `get_parent()` API for each nodes to access its parent node.
 
 ```python
-module = demo.read_and_build_module_configuration(DESC_FILE_LOCATION)
+module = demo.read(DESC_FILE_LOCATION)
 contB = demo.get_node('/ModuleConfig/demo/ContB_conf_0')
 assert (contB is not None), "cannot be None"
 assert (contB.get_parent() is not None), "parent cannot be None"
@@ -269,6 +269,22 @@ assert (contB.get_parent().get_short_name() == 'demo'), "parents short name is d
 assert (contB.get_parent() == module), "the nodes should be same"
 ```
 
-### Please refer the test "tests/test_generatedmodule.py" to know more about accessing different types of data from the generated module code.
+### Create new file
+```python
+module = demo.new('ModuleConf.arxml', add_mandatory_containers=False)
+module.save()
+```
+Creates a new module configuration arxml file and returns the module node.Pass the value of argument `add_mandatory_containers` as True if the mandatory containers/parameters/references for the module needs to be created. Default value if available will be set for the parameters.
 
 
+### Create new containers/parameters/references
+There exists a `new_<element>` method inside the parent node to create new containers/parameters/references.
+```python
+module = demo.new('ModuleConf.arxml', add_mandatory_containers=True)
+cont = module.new_contB('newContB', add_mandatory_elements=True)
+module.save()
+```
+> As metioned above, if the `add_mandatory_elements` is set to True, then all the mandatory sub-containers/parameters/references will be created.
+
+
+Please refer the test `tests/test_generatedmodule.py` to know more about accessing different types of data from the generated module code.
