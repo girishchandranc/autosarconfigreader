@@ -34,5 +34,4 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        pip install pytest-cov
-        pytest --cov=asrGenerator --cov-report=xml --cov-report=html
+        pytest
