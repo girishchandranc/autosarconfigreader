@@ -11,7 +11,7 @@ import os
 
 # Enums for possible parameter and reference types
 ParameterTypes = Enum('ParameterTypes', 'INTEGER FLOAT BOOLEAN STRING FUNCTION ENUMERATION')
-ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREIGN_REFERENCE')
+ReferenceTypes = Enum('ReferenceTypes', 'SIMPLE_REFERENCE CHOICE_REFERENCE FOREIGN_REFERENCE INSTANCE_REFERENCE')
 
 # dict supposed to be used internally by the module to store the path and its corresponding autosar node
 __pathsToNodeDict__ = {}

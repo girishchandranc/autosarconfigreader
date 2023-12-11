@@ -1,4 +1,4 @@
-{%- macro createContainerClass(container, ParameterTypes) -%}
+{%- macro createContainerClass(container, ParameterTypes, ReferenceTypes) -%}
 # Container configuration node for {{ container.get_name() }}
 class {{ container.get_class_name() }}(AutosarNode):
     def __init__(self, parent, node):
@@ -301,12 +301,18 @@ class {{ container.get_class_name() }}(AutosarNode):
                                           single reference value.
         """
         {%- if reference.is_multi_instance() %}
+        references = AutosarNode._add_or_get_xml_node(self._node, 'REFERENCE-VALUES')
+{%- if reference.get_type() == ReferenceTypes.INSTANCE_REFERENCE %}
+        xmlNode = AutosarNode._create_node('ECUC-INSTANCE-REFERENCE-VALUE', dest='{{ reference.tag }}', definition_ref='{{ reference.full_path_until_root }}')
+{% else %}
         xmlNode = AutosarNode._create_node('ECUC-REFERENCE-VALUE', dest='{{ reference.tag }}', definition_ref='{{ reference.full_path_until_root }}')
+{%- endif %}
+        references.append(xmlNode)
         value = self.{{ reference.get_name() }}(self, xmlNode)
         self.__add_{{ reference.get_name() }}(value)
+        self._set_model_modified(True)
         return value
         {%- else %}
-        {%- endif %}
         if self.__{{ reference.get_name() }}_value is not None:
             raise InvalidChildNodeException('Operation not possible. {{ reference.get_name() }} already exists. Use get_{{ reference.get_name() }} to access the reference.')
 
@@ -316,6 +322,7 @@ class {{ container.get_class_name() }}(AutosarNode):
         self.__{{ reference.get_name() }}_value = self.{{ reference.get_name() }}(self, xmlNode)
         self._set_model_modified(True)
         return self.__{{ reference.get_name() }}_value
+        {%- endif %}
 
 {% endfor -%}
 {%- endmacro %}
@@ -436,15 +443,23 @@ class {{ container.get_class_name() }}(AutosarNode):
             :param node: The xml node for which the autosar node needs to be created.
             """
             super().__init__(parent, node, '{{ reference.get_name() }}', '{{ reference.get_path() }}')
+{%- if reference.get_type() == ReferenceTypes.INSTANCE_REFERENCE %}
+            self.__valueNode = node.find('{*}VALUE-IREF/TARGET-REF')
+            self.__value = self.__valueNode.text if self.__valueNode is not None else None
+            if self.__valueNode is None:
+                valueRefNode = AutosarNode._add_or_get_xml_node(node, 'VALUE-IREF')
+                self.__valueNode = AutosarNode._add_or_get_xml_node(valueRefNode, 'TARGET-REF', dest='{{ reference.get_dest_tag_for_ref_value() }}')
+{%- else %}
             self.__valueNode = node.find('{*}VALUE-REF')
             self.__value = self.__valueNode.text if self.__valueNode is not None else None
             self.__valueNode = AutosarNode._add_or_get_xml_node(node, 'VALUE-REF', dest='{{ reference.get_dest_tag_for_ref_value() }}') if self.__valueNode is None else self.__valueNode
+{%- endif %}
             self.__type = {{ reference.get_type() }}
 {%- if reference.get_type() == ReferenceTypes.SIMPLE_REFERENCE %}
             self.__destinationRef = '{{ reference.get_destination() }}'
 {% elif reference.get_type() == ReferenceTypes.CHOICE_REFERENCE %}
             self.__destinationRefs = {{ reference.get_destinations() }}
-{% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE %}
+{% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE or reference.get_type() == ReferenceTypes.INSTANCE_REFERENCE %}
             self.__destinationType = '{{ reference.get_destination_type() }}'
 {%- endif %}
 
@@ -464,7 +479,7 @@ class {{ container.get_class_name() }}(AutosarNode):
 
         def get_type(self):
             """
-            Returns the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE or FOREIGN_REFERENCE)
+            Returns the type of reference(if SIMPLE_REFERENCE, CHOICE_REFERENCE, FOREIGN_REFERENCE or INSTANCE_REFERENCE)
             """
             return self.__type
     
@@ -480,10 +495,10 @@ class {{ container.get_class_name() }}(AutosarNode):
             Returns the value of 'DESTINATION-REF' from the definition file
             """
             return self.__destinationRefs
-{% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE %}
+{% elif reference.get_type() == ReferenceTypes.FOREIGN_REFERENCE or reference.get_type() == ReferenceTypes.INSTANCE_REFERENCE %}
         def get_destination_type(self):
             """
-            Returns the value of DESTINATION-TYPE from the definition file for FOREIGN_REFERENCE
+            Returns the value of DESTINATION-TYPE from the definition file
             """
             return self.__destinationType
 {%- endif %}
@@ -491,7 +506,7 @@ class {{ container.get_class_name() }}(AutosarNode):
 
 
 {%- macro createContainer(container, ParameterTypes, ReferenceTypes) -%}
-{{ createContainerClass(container, ParameterTypes) }}
+{{ createContainerClass(container, ParameterTypes, ReferenceTypes) }}
 {# Internal comment :  parameters and references will be generated as inner classes to the container class. #}
 {%- for parameter in container.get_parameters() %}
 {{ createParameterClass(parameter, ParameterTypes) }}

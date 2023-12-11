@@ -175,6 +175,8 @@ class Container(AutosarNode):
                 self.__references.append(Reference(reference, ReferenceTypes.CHOICE_REFERENCE, 'ECUC-CHOICE-REFERENCE-DEF'))
             for reference in referencesNode.findall('{*}ECUC-FOREIGN-REFERENCE-DEF'):
                 self.__references.append(Reference(reference, ReferenceTypes.FOREIGN_REFERENCE, 'ECUC-FOREIGN-REFERENCE-DEF'))
+            for reference in referencesNode.findall('{*}ECUC-INSTANCE-REFERENCE-DEF'):
+                self.__references.append(Reference(reference, ReferenceTypes.INSTANCE_REFERENCE, 'ECUC-INSTANCE-REFERENCE-DEF'))
 
     def is_choice_container(self):
         return self.__isChoiceContainer
@@ -289,7 +291,7 @@ class Reference(AutosarNode):
                 if destinationRef is not None:
                     self.__targetRefs.append(destinationRef.text)
 
-        if self.__referenceType == ReferenceTypes.FOREIGN_REFERENCE:
+        if self.__referenceType == ReferenceTypes.FOREIGN_REFERENCE or self.__referenceType == ReferenceTypes.INSTANCE_REFERENCE:
             destinationType = node.find('{*}DESTINATION-TYPE')
             if destinationType is not None:
                 self.__targetType = destinationType.text
