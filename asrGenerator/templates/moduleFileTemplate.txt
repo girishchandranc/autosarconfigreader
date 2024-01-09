@@ -308,7 +308,7 @@ class {{ module.get_name() }}(AutosarNode):
         """
         super().__init__(None, node, '{{ module.get_name() }}', '{{ module.get_path() }}')
         self.__rootNode = rootNode
-        self.__file = file
+        self.file = file
         self.__isModelModified = False
         {% for container in module.get_containers() -%}
             {%- if container.is_multi_instance() %}
@@ -420,7 +420,7 @@ class {{ module.get_name() }}(AutosarNode):
             raise InvalidChildNodeException('Operation not possible. {{ container.get_name() }} already exists. Use get_{{ container.get_name() }} to access the container.')
 
         containers = AutosarNode._add_or_get_xml_node(self._node, 'CONTAINERS')
-        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ container.get_tag() }}', definition_ref='{{ module.full_path_until_root }}')
+        xmlNode = AutosarNode._create_node('ECUC-CONTAINER-VALUE', short_name=name, dest='{{ container.get_tag() }}', definition_ref='{{ container.full_path_until_root }}')
         containers.append(xmlNode)
         self.__{{ container.get_name() }} = {{ container.get_name() }}(self, xmlNode)
         {% if container.any_mandatory_sub_containers_or_parameters_or_references() %}
@@ -479,7 +479,7 @@ class {{ module.get_name() }}(AutosarNode):
         elif file is not None:
             self.__rootNode.write(file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
         else:
-            self.__rootNode.write(self.__file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
+            self.__rootNode.write(self.file, pretty_print=True, xml_declaration=True,   encoding="utf-8")
         return 'The model saved!'
 
 {% for container in module.get_containers() %}
